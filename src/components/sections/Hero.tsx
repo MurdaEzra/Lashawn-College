@@ -5,7 +5,7 @@ export function Hero() {
   return <div className="relative bg-gray-900 py-16 md:py-24">
       {/* Background image with overlay */}
       <div className="absolute inset-0 z-0 bg-cover bg-center" style={{
-      backgroundImage: "url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80')"
+      backgroundImage: "url('https://res.cloudinary.com/dgfmhyebp/image/upload/v1760683152/WhatsApp_Image_2025-10-16_at_3.02.25_PM_1_n9naaq.jpg')"
     }}>
         <div className="absolute inset-0 bg-gray-900/70"></div>
       </div>
