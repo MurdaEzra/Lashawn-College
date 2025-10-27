@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { supabase } from '../context/supabaseClient'; 
+
 export function Contact() {
   const [formData, setFormData] = useState({
     name: '',
@@ -9,29 +11,62 @@ export function Contact() {
     subject: '',
     message: ''
   });
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const {
-      name,
-      value
-    } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+  const [status, setStatus] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real implementation, this would send data to a backend
-    console.log('Form submitted:', formData);
-    alert("Thank you for your message! We'll get back to you shortly.");
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      subject: '',
-      message: ''
-    });
-  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  setStatus('Opening WhatsApp...');
+
+  // Build the WhatsApp message
+  const message = `
+New Contact Form Submission:
+
+Name: ${formData.name}
+Email: ${formData.email}
+Phone: ${formData.phone}
+Subject: ${formData.subject}
+Message: ${formData.message}
+  `;
+
+  const encodedMessage = encodeURIComponent(message);
+  const phoneNumber = '254728135200'; 
+  const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+
+  // Optional: still save to Supabase for record-keeping
+  try {
+    const { error } = await supabase.from('messages').insert([formData]);
+    if (error) {
+      console.error('Supabase insert error:', error);
+    }
+  } catch (err) {
+    console.error('Unexpected error:', err);
+  }
+
+  // Open WhatsApp chat with the message
+  window.open(whatsappURL, '_blank');
+
+  // Reset form and state
+  setFormData({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: '',
+  });
+  setIsSubmitting(false);
+  setStatus('Message sent! Please complete sending on WhatsApp.');
+};
+
   return <div className="min-h-screen bg-white">
       {/* Header Banner */}
       <div className="bg-gray-800 py-16 text-white">
@@ -179,8 +214,8 @@ export function Contact() {
                     <textarea id="message" name="message" value={formData.message} onChange={handleChange} required rows={5} className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#2E8B57] focus:outline-none focus:ring-1 focus:ring-[#2E8B57]"></textarea>
                   </div>
                   <div className="pt-2">
-                    <Button type="submit" variant="primary" className="w-full">
-                      Send Message
+                    <Button type="submit" variant="primary" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? 'Sending...' : 'Send Message'}
                     </Button>
                   </div>
                 </form>

@@ -10,16 +10,18 @@ export function Header() {
   
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-md">
+    <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-md shadow-md">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between py-4">
+        <div className="flex items-center justify-between py-4 max-h-24">
           
           {/* Logo and Title */}
           <Link to="/" className="flex items-center space-x-2">
             <img 
               src={logo} 
               alt="Lashawn Driving and Computer College Logo" 
-              className="h-20 w-auto object-contain" 
+              className="h-24 w-auto object-contain" 
+              style={{ imageRendering: 'auto'}}
+              
             />
           </Link>
 

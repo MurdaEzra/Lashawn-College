@@ -14,30 +14,30 @@ export function DrivingCourses() {
     title: 'Category B (Cars)',
     category: 'Driving',
     description: 'Comprehensive training for beginners to advanced drivers, including practical lessons and test preparation.',
-    duration: '6-8 weeks',
+    duration: '2-4 weeks',
     prerequisites: '18+ years, ID/Passport',
-    imageUrl: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686049/WhatsApp_Image_2025-10-16_at_3.02.25_PM_3_qucmoo.jpg'
   }, {
     title: 'Category C (Light Commercial)',
     category: 'Driving',
     description: 'Specialized training for light commercial vehicles with focus on load handling and driving safety.',
-    duration: '8-10 weeks',
+    duration: '2-4 weeks',
     prerequisites: 'Category B license, 21+ years',
-    imageUrl: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686048/WhatsApp_Image_2025-10-16_at_3.02.26_PM_3_r8ryit.jpg'
   }, {
     title: 'Category D (Heavy Vehicles)',
     category: 'Driving',
     description: 'Advanced training for buses, matatus and heavy vehicles with focus on passenger safety and regulations.',
     duration: '10-12 weeks',
     prerequisites: 'Category B license, 24+ years',
-    imageUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686048/WhatsApp_Image_2025-10-16_at_3.02.27_PM_jgs1gx.jpg'
   }, {
     title: 'Tuktuk (Three-wheelers)',
     category: 'Driving',
     description: 'Specialized training for three-wheeler vehicles including practical driving and business-use training.',
     duration: '3-4 weeks',
     prerequisites: '18+ years, ID/Passport',
-    imageUrl: 'https://images.unsplash.com/photo-1534321238895-da3ab632df3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+    imageUrl: 'https://res.cloudinary.com/dgfmhyebp/image/upload/v1760687600/LASHAWN_DRIIVING_hhhg2q.png'
   }];
   const instructors = [{
     name: 'John Mwangi',
