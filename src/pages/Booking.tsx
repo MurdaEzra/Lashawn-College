@@ -34,12 +34,54 @@ export function Booking() {
     window.scrollTo(0, 0);
   };
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real implementation, this would send data to a backend
-    console.log('Form submitted:', formData);
-    setSubmitted(true);
-    window.scrollTo(0, 0);
-  };
+  e.preventDefault();
+
+  // Build WhatsApp message
+  const message = `
+New Booking Request:
+---------------------
+Name: ${formData.name}
+Email: ${formData.email}
+Phone: ${formData.phone}
+
+Course Type: ${formData.courseType}
+Specific Course: ${formData.specificCourse}
+Course Format: ${formData.courseFormat || 'N/A'}
+
+Preferred Date: ${formData.preferredDate}
+Preferred Time: ${formData.preferredTime}
+
+Additional Message: ${formData.message || 'None'}
+---------------------
+Please follow up with this client.
+  `;
+
+  
+  const phone = "254728135200"; 
+  const encoded = encodeURIComponent(message);
+  const whatsappUrl = `https://wa.me/${phone}?text=${encoded}`;
+
+  // Open WhatsApp chat
+  window.open(whatsappUrl, "_blank");
+
+  // Optionally reset form
+  setFormData({
+    name: '',
+    email: '',
+    phone: '',
+    courseType: '',
+    specificCourse: '',
+    courseFormat: '',
+    preferredDate: '',
+    preferredTime: '',
+    message: ''
+  });
+
+  // Mark as submitted for UI feedback
+  setSubmitted(true);
+  window.scrollTo(0, 0);
+};
+
   const courseOptions = {
     driving: ['Category A (Motorcycles)', 'Category B (Cars)', 'Category C (Light Commercial)', 'Category D (Heavy Vehicles)', 'Tuktuk (Three-wheelers)'],
     computer: ['Microsoft Office Suite', 'Basic IT & Networking', 'Graphic Design Fundamentals'],

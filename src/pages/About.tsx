@@ -1,36 +1,7 @@
 import React, { memo } from 'react';
 import { Button } from '../components/ui/Button';
-import { InstructorCard } from '../components/ui/InstructorCard';
+
 export function About() {
-  const instructors = [{
-    name: 'John Mwangi',
-    role: 'Senior Driving Instructor',
-    experience: '10 years',
-    certifications: ['Kenya Driving School Association', 'Defensive Driving Certified'],
-    bio: 'John has trained over 1,200 learners and specializes in defensive driving techniques for all vehicle categories.',
-    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80'
-  }, {
-    name: 'Mary Kamau',
-    role: 'Head Driving Instructor',
-    experience: '15 years',
-    certifications: ['Master Instructor Certificate', 'Road Safety Trainer'],
-    bio: 'Mary leads our team of instructors and has expertise in all vehicle categories with a focus on safety first approach.',
-    imageUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80'
-  }, {
-    name: 'David Otieno',
-    role: 'Computer Training Instructor',
-    experience: '8 years',
-    certifications: ['Microsoft Certified Trainer', 'CompTIA A+ Certified'],
-    bio: 'David is our lead computer instructor with extensive experience in Microsoft Office and IT fundamentals training.',
-    imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80'
-  }, {
-    name: 'Sarah Njeri',
-    role: 'First Aid & Safety Instructor',
-    experience: '12 years',
-    certifications: ['Red Cross First Aid Trainer', 'Occupational Safety Specialist'],
-    bio: 'Sarah brings real-world emergency response experience to her first aid classes, making them practical and memorable.',
-    imageUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80'
-  }];
   return <div className="min-h-screen bg-white">
       {/* Header Banner */}
       <div className="bg-gray-800 py-16 text-white">
@@ -121,16 +92,7 @@ export function About() {
         </div>
       </section>
       {/* Instructors Section */}
-      <section className="bg-white py-12">
-        <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center text-2xl font-semibold text-gray-800">
-            Meet Our Instructors
-          </h2>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {instructors.map((instructor, index) => <InstructorCard key={index} name={instructor.name} role={instructor.role} experience={instructor.experience} certifications={instructor.certifications} bio={instructor.bio} imageUrl={instructor.imageUrl} />)}
-          </div>
-        </div>
-      </section>
+    
       {/* Facilities Section */}
       <section className="bg-gray-50 py-12">
         <div className="container mx-auto px-4">
@@ -140,7 +102,7 @@ export function About() {
           <div className="mx-auto max-w-5xl">
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
               <div className="overflow-hidden rounded-lg shadow-sm">
-                <img src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Classroom" className="h-48 w-full object-cover" />
+                <img src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686049/WhatsApp_Image_2025-10-16_at_3.02.25_PM_vnknei.jpg" alt="Classroom" className="h-48 w-full object-cover" />
                 <div className="p-4">
                   <h3 className="mb-2 text-lg font-semibold text-gray-800">
                     Modern Classrooms
@@ -152,7 +114,7 @@ export function About() {
                 </div>
               </div>
               <div className="overflow-hidden rounded-lg shadow-sm">
-                <img src="https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Driving training" className="h-48 w-full object-cover" />
+                <img src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686048/WhatsApp_Image_2025-10-16_at_3.02.26_PM_1_hiduui.jpg" alt="Driving training" className="h-48 w-full object-cover" />
                 <div className="p-4">
                   <h3 className="mb-2 text-lg font-semibold text-gray-800">
                     Training Vehicles
@@ -164,7 +126,7 @@ export function About() {
                 </div>
               </div>
               <div className="overflow-hidden rounded-lg shadow-sm">
-                <img src="https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Printing services" className="h-48 w-full object-cover" />
+                <img src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686049/WhatsApp_Image_2025-10-16_at_3.02.24_PM_2_t3nhf4.jpg" alt="Printing services" className="h-48 w-full object-cover" />
                 <div className="p-4">
                   <h3 className="mb-2 text-lg font-semibold text-gray-800">
                     Printing & Service Center

@@ -39,21 +39,7 @@ export function DrivingCourses() {
     prerequisites: '18+ years, ID/Passport',
     imageUrl: 'https://res.cloudinary.com/dgfmhyebp/image/upload/v1760687600/LASHAWN_DRIIVING_hhhg2q.png'
   }];
-  const instructors = [{
-    name: 'John Mwangi',
-    role: 'Senior Driving Instructor (Category B & C)',
-    experience: '10+ years',
-    certifications: ['Kenya Driving School Association', 'Defensive Driving Certified'],
-    bio: 'John has trained over 1,200 learners and specializes in defensive driving techniques.',
-    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80'
-  }, {
-    name: 'Mary Kamau',
-    role: 'Head Driving Instructor (All Categories)',
-    experience: '15+ years',
-    certifications: ['Master Instructor Certificate', 'Road Safety Trainer'],
-    bio: 'Mary leads our team of instructors and has expertise in all vehicle categories.',
-    imageUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80'
-  }];
+ 
   // Added pricing data
   const pricingData = [{
     category: 'Category A (Motorcycles)',
@@ -429,42 +415,7 @@ export function DrivingCourses() {
           </div>
         </div>
       </section>
-      {/* Instructors Section */}
-      <section className="bg-white py-12">
-        <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center text-2xl font-semibold text-gray-800">
-            Our Driving Instructors
-          </h2>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            {instructors.map((instructor, index) => <div key={index} className="flex flex-col md:flex-row">
-                <div className="mb-4 md:mb-0 md:mr-6 md:w-1/3">
-                  <img src={instructor.imageUrl} alt={instructor.name} className="h-auto w-full rounded-lg object-cover" />
-                </div>
-                <div className="md:w-2/3">
-                  <h3 className="mb-1 text-xl font-semibold text-gray-800">
-                    {instructor.name}
-                  </h3>
-                  <p className="mb-2 text-sm font-medium text-[#2E8B57]">
-                    {instructor.role}
-                  </p>
-                  <div className="mb-3 flex items-center text-sm text-gray-600">
-                    <span className="mr-2 font-medium">Experience:</span>
-                    <span>{instructor.experience}</span>
-                  </div>
-                  <div className="mb-3">
-                    <span className="mb-1 block text-sm font-medium text-gray-600">
-                      Certifications:
-                    </span>
-                    <ul className="ml-5 list-disc text-sm text-gray-600">
-                      {instructor.certifications.map((cert, i) => <li key={i}>{cert}</li>)}
-                    </ul>
-                  </div>
-                  <p className="text-gray-600">{instructor.bio}</p>
-                </div>
-              </div>)}
-          </div>
-        </div>
-      </section>
+      
       {/* FAQ Section - NEW */}
       <section className="bg-gray-50 py-12">
         <div className="container mx-auto px-4">
