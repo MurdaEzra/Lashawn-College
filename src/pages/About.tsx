@@ -21,9 +21,9 @@ export function About() {
             </h2>
             <div className="space-y-4 text-gray-600">
               <p>
-                Lashawn Driving and Computer College was established with a
-                mission to provide high-quality, accessible education and
-                services to our community. We believe in practical, hands-on
+                Lashawn Driving and Computer College has evolved over the past 5 years. 
+                It was founded in 2020 to play the role of giving trainees the opportunity to learn with experts.
+                We believe in practical, hands-on
                 learning that prepares our students for real-world challenges.
               </p>
               <p>
@@ -41,6 +41,17 @@ export function About() {
                 certified professional with years of experience in their field,
                 ensuring that our students receive the best possible education.
               </p>
+              <p>
+                We have our branches in Kinamba and Eldoret towns, making it
+                convenient for students from different regions to access our
+                services. Our state-of-the-art facilities and well-maintained
+                training vehicles provide an optimal learning environment.
+              </p>
+              <p>
+                At Lashawn Driving and Computer College, we are dedicated to
+                helping our students achieve their goals and become skilled,
+                confident professionals in driving and computer literacy.
+              </p>
             </div>
           </div>
         </div>
@@ -55,9 +66,14 @@ export function About() {
                   Our Mission
                 </h2>
                 <p className="text-gray-600">
-                  To empower individuals with practical skills and knowledge
-                  that enhance their personal and professional lives, delivered
-                  through expert instruction in a supportive environment.
+                  To provide holistic learning and services to our trainees and clients.
+                </p>
+                
+                <h3 className="mt-6 mb-4 text-xl font-semibold text-gray-800">
+                  Our Vision </h3>
+                <p className="text-gray-600">
+                  To be a college that enables our trainees to learn with experts 
+                  as well as provide the exact required services to our clients.
                 </p>
               </div>
               <div>
@@ -153,7 +169,7 @@ export function About() {
             instructors.
           </p>
           <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-            <Button variant="primary" to="/booking" className="bg-white text-[#2E8B57] hover:bg-gray-100">
+            <Button variant="primary" to="/booking" className="bg-green text-[#2E8B57] hover:bg-gray-100">
               Enroll Now
             </Button>
             <Button variant="outline" to="/contact" className="border-white text-white hover:bg-white/10">

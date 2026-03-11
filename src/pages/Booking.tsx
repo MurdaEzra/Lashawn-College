@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { CheckCircle } from 'lucide-react';
+import emailjs from '@emailjs/browser';
 export function Booking() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -36,49 +37,29 @@ export function Booking() {
   const handleSubmit = (e: React.FormEvent) => {
   e.preventDefault();
 
-  // Build WhatsApp message
-  const message = `
-New Booking Request:
----------------------
-Name: ${formData.name}
-Email: ${formData.email}
-Phone: ${formData.phone}
+  // Replace these strings with your actual IDs from the EmailJS dashboard
+  const serviceId = 'service_euowsis';
+  const templateId = 'template_r710chj';
+  const publicKey = 'Ib-P6nuOrMD7NE9oI';
 
-Course Type: ${formData.courseType}
-Specific Course: ${formData.specificCourse}
-Course Format: ${formData.courseFormat || 'N/A'}
+  // EmailJS takes the serviceID, templateID, the data object, and the publicKey
+  emailjs.send(serviceId, templateId, formData, publicKey)
+    .then((response) => {
+      console.log('SUCCESS!', response.status, response.text);
+      setSubmitted(true); // Shows the success UI you already built
+      
+      // Reset form
+      setFormData({
+        name: '', email: '', phone: '', courseType: '',
+        specificCourse: '', courseFormat: '', preferredDate: '',
+        preferredTime: '', message: ''
+      });
+    })
+    .catch((err) => {
+      console.error('FAILED...', err);
+      alert("Oops! Something went wrong. Please try again or contact us directly.");
+    });
 
-Preferred Date: ${formData.preferredDate}
-Preferred Time: ${formData.preferredTime}
-
-Additional Message: ${formData.message || 'None'}
----------------------
-Please follow up with this client.
-  `;
-
-  
-  const phone = "254728135200"; 
-  const encoded = encodeURIComponent(message);
-  const whatsappUrl = `https://wa.me/${phone}?text=${encoded}`;
-
-  // Open WhatsApp chat
-  window.open(whatsappUrl, "_blank");
-
-  // Optionally reset form
-  setFormData({
-    name: '',
-    email: '',
-    phone: '',
-    courseType: '',
-    specificCourse: '',
-    courseFormat: '',
-    preferredDate: '',
-    preferredTime: '',
-    message: ''
-  });
-
-  // Mark as submitted for UI feedback
-  setSubmitted(true);
   window.scrollTo(0, 0);
 };
 

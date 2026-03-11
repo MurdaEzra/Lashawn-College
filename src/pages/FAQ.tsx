@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { motion } from 'framer-motion';
+
 interface FAQItemProps {
   question: string;
   answer: React.ReactNode;
@@ -13,15 +15,39 @@ function FAQItem({
   isOpen,
   toggleOpen
 }: FAQItemProps) {
-  return <div className="border-b border-gray-200">
-      <button onClick={toggleOpen} className="flex w-full items-center justify-between py-4 text-left font-medium text-gray-800 hover:text-[#2E8B57]" aria-expanded={isOpen}>
+  return (
+    <motion.div
+      className="border-b border-gray-200"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <button
+        onClick={toggleOpen}
+        className="flex w-full items-center justify-between py-4 text-left font-medium text-gray-800 hover:text-[#2E8B57]"
+        aria-expanded={isOpen}
+      >
         <span>{question}</span>
-        {isOpen ? <ChevronUp className="ml-2 flex-shrink-0" size={20} /> : <ChevronDown className="ml-2 flex-shrink-0" size={20} />}
+        {isOpen ? (
+          <ChevronUp className="ml-2 flex-shrink-0" size={20} />
+        ) : (
+          <ChevronDown className="ml-2 flex-shrink-0" size={20} />
+        )}
       </button>
-      {isOpen && <div className="pb-4">
-          <div className="text-gray-600">{answer}</div>
-        </div>}
-    </div>;
+
+      {isOpen && (
+        <motion.div
+          className="pb-4 text-gray-600"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {answer}
+        </motion.div>
+      )}
+    </motion.div>
+  );
 }
 export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
