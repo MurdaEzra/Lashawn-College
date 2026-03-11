@@ -40,7 +40,7 @@ export function CourseCard({
           <Button variant="outline" size="sm">
             Learn More
           </Button>
-          <Button variant="primary" size="sm">
+          <Button variant="primary" to="/booking" size="sm">
             Enroll Now
           </Button>
         </div>

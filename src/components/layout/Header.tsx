@@ -17,7 +17,7 @@ export function Header() {
           {/* Logo and Title */}
           <Link to="/" className="flex items-center space-x-2">
             <img 
-              src={logo} 
+              src= "https://res.cloudinary.com/dgfmhyebp/image/upload/v1773227181/Logo_kwrpld.png"
               alt="Lashawn Driving and Computer College Logo" 
               className="h-24 w-auto object-contain" 
               style={{ imageRendering: 'auto'}}

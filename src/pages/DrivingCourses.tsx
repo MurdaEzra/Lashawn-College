@@ -485,7 +485,7 @@ export function DrivingCourses() {
             confident and safe driver. Book your first lesson today!
           </p>
           <div className="flex flex-col items-center justify-center space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-            <Button variant="primary" to="/booking" className="bg-white text-[#2E8B57] hover:bg-gray-100">
+            <Button variant="primary" to="/booking" className="bg-white/10 px-6 py-3 text-[#2E8B57] hover:bg-gray-100">
               Book a Lesson
             </Button>
             <a href="tel:+254117564318" className="flex items-center rounded-full bg-white/10 px-6 py-3 font-medium backdrop-blur-sm transition-colors hover:bg-white/20">
