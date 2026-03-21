@@ -17,9 +17,7 @@ export function TestimonialsSection() {
 
           <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-8 py-12 text-center">
             <p className="font-body text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              Placeholder testimonials and stock profile images have been
-              removed. Add real student reviews here once your live content
-              source is ready.
+              Reviews Will Be Added From Google
             </p>
           </div>
         </div>

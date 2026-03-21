@@ -143,7 +143,7 @@ export function AdminLogin() {
         </div>
         <div className="relative z-10 flex flex-col justify-center px-16 w-full">
           <img
-            src="/Lashawn_Logo-removebg-preview.png"
+            src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1774090550/Logo_cmr1we.png"
             alt="Lashawn Logo"
             className="h-20 w-auto object-contain mb-10 brightness-0 invert self-start" />
           
@@ -286,7 +286,7 @@ export function AdminLogin() {
                 className="text-[#2E8B57] hover:underline text-sm"
                 onClick={() => setShowRegister(true)}
               >
-                Create an admin account
+                {/*Create an admin account*/}
               </button>
             </div>
           </form>

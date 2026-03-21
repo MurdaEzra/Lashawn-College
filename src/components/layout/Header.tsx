@@ -5,7 +5,7 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   return (
-    <header className="sticky top-0 z-40 bg-white shadow-sm">
+    <header className="sticky top-0 z-40 border-b border-white/20 bg-white/70 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20 lg:h-24">
           <Link to="/" className="flex items-center flex-shrink-0">
@@ -133,7 +133,7 @@ export function Header() {
           onClick={toggleMenu} />
         
           <div className="absolute left-0 right-0 top-full z-40 lg:hidden">
-            <div className="mx-4 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+            <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-white/40 bg-white/80 shadow-2xl backdrop-blur-xl supports-[backdrop-filter]:bg-white/75">
               <nav className="p-4">
                 <ul className="space-y-1 font-accent text-base">
                   <li>
