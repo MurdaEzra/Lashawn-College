@@ -24,7 +24,7 @@ export const DRIVING_CATEGORIES: Category[] = [
   name: 'Category A — Motorcycles',
   description: 'Training for two and three-wheeled motor vehicles.',
   imageUrl:
-  'https://images.unsplash.com/photo-1558981806-ec527fa84c39?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+  'https://res.cloudinary.com/dgfmhyebp/image/upload/v1774093199/Bike_wallpaper_qbsflx.jpg',
   subclasses: [
   {
     code: 'A1',
