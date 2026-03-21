@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=League+Spartan:wght@300;400;500;600;700&display=swap');
+
+/* PLEASE NOTE: THESE TAILWIND IMPORTS SHOULD NEVER BE DELETED */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* DO NOT DELETE THESE TAILWIND IMPORTS, OTHERWISE THE STYLING WILL NOT RENDER AT ALL */
+
+:root {
+  --brand-green: #2E8B57;
+  --brand-green-dark: #1e6b41;
+  --brand-red: #D7263D;
+  --brand-red-dark: #b01e32;
+  --brand-cream: #FAF8F5;
+  --brand-charcoal: #1a1a1a;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: 'Times New Roman', Georgia, 'Cambria', serif;
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Montserrat', 'Futura', sans-serif;
+}
+.font-heading {
+  font-family: 'Montserrat', 'Futura', sans-serif;
+}
+.font-body {
+  font-family: 'Times New Roman', Georgia, 'Cambria', serif;
+}
+.font-accent {
+  font-family: 'League Spartan', 'Futura', sans-serif;
+}
+/* Print styles */
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-exam-form,
+  .print-exam-form * {
+    visibility: visible;
+  }
+  .print-exam-form {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 10mm;
+    box-sizing: border-box;
+    font-size: 11px;
+    overflow: hidden;
+  }
+  .print-exam-form img {
+    max-width: 100%;
+    height: auto;
+    page-break-inside: avoid;
+  }
+  .print-exam-form .doc-thumbnails img {
+    max-height: 120px;
+    width: auto;
+  }
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}
