@@ -86,23 +86,13 @@ export function DrivingCourses() {
                 </ul>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-xl border border-gray-200 text-center">
-                <p className="font-heading text-3xl font-extrabold text-brand-green mb-1">
-                  15+
-                </p>
-                <p className="font-accent text-xs uppercase tracking-widest text-gray-500">
-                  Years Experience
-                </p>
-              </div>
-              <div className="bg-white p-6 rounded-xl border border-gray-200 text-center">
-                <p className="font-heading text-3xl font-extrabold text-brand-green mb-1">
-                  100%
-                </p>
-                <p className="font-accent text-xs uppercase tracking-widest text-gray-500">
-                  Certified
-                </p>
-              </div>
+            <div className="relative">
+              <div className="absolute -inset-4 bg-brand-green/10 rounded-2xl transform rotate-3"></div>
+              <img
+                src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686048/WhatsApp_Image_2025-10-16_at_3.02.27_PM_jgs1gx.jpg"
+                alt="Students in a classroom"
+                className="relative rounded-2xl shadow-lg object-cover h-[500px] w-full" />
+              
             </div>
           </div>
         </div>

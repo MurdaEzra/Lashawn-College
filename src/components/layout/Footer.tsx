@@ -14,7 +14,7 @@ export function Footer() {
             <img
               src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1774090550/Logo_cmr1we.png"
               alt="Lashawn Driving & Computer College"
-              className="h-14.1 w-auto object-contain mb-5 brightness-0 invert" />
+              className="h-20 md:h-60 lg:h-100 w-auto object-contain mb-5 brightness-0 invert" />
             
             <p className="font-body text-gray-400 leading-relaxed">
               Professional driving and computer instruction in a friendly,

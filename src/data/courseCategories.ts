@@ -187,7 +187,7 @@ export const DRIVING_CATEGORIES: Category[] = [
   name: 'Category F — Special Vehicles',
   description: 'Training for special-purpose motor vehicles.',
   imageUrl:
-  'https://images.unsplash.com/photo-1580901368919-7738efb0f228?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+  'https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686050/WhatsApp_Image_2025-10-16_at_3.02.26_PM_2_ans4rn.jpg',
   subclasses: [
   {
     code: 'F',
