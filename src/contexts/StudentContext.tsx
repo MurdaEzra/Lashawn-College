@@ -93,7 +93,7 @@ export interface Student {
 }
 
 export interface StudentRegistrationPayload {
-  registrationNumber: string;
+  registrationNumber?: string;
   applicationType: string;
   branch: string;
   drivingCategory: string;
@@ -195,6 +195,22 @@ const mapStudentRow = (row: StudentRow): Student => {
   };
 };
 
+async function getNextRegistrationNumber() {
+  const currentYear = new Date().getFullYear();
+  const { data, error } = await supabase.rpc('next_registration_number', {
+    registration_year: currentYear
+  });
+
+  if (error || !data) {
+    throw new Error(
+      error?.message ||
+      'Failed to generate the next registration number from Supabase.'
+    );
+  }
+
+  return data as string;
+}
+
 export function StudentProvider({ children }: { children: React.ReactNode }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -282,9 +298,11 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
   const addStudent = useCallback(
     async (student: StudentRegistrationPayload) => {
       setError('');
+      const registrationNumber =
+        student.registrationNumber || await getNextRegistrationNumber();
 
       const studentInsert = {
-        registration_number: student.registrationNumber,
+        registration_number: registrationNumber,
         application_type: student.applicationType || null,
         branch: student.branch || null,
         student_name: student.studentName,
@@ -409,7 +427,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
       }
 
       const created: Student = {
-        id: student.registrationNumber,
+        id: registrationNumber,
         studentId: createdStudent.id,
         enrollmentId: createdEnrollment?.id,
         name: student.studentName,

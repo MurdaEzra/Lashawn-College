@@ -20,19 +20,35 @@ export function Contact() {
       [name]: value
     }));
   };
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(
-      'Contact form submission is not connected yet. Hook this form up to Supabase or your email backend before going live.'
-    );
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      subject: '',
-      message: ''
-    });
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSending(true);
+
+  // IDs for the email TO YOU
+  const serviceId = 'service_euowsis';
+  const adminTemplateId = 'template_r710chj';
+  
+  // ID for the AUTO-REPLY TO CUSTOMER
+  const autoReplyTemplateId = 'template_f5am0mi'; 
+  
+  const publicKey = 'Ib-P6nuOrMD7NE9oI';
+
+  try {
+    // Send both emails simultaneously
+    await Promise.all([
+      emailjs.send(serviceId, adminTemplateId, formData, publicKey),
+      emailjs.send(serviceId, autoReplyTemplateId, formData, publicKey)
+    ]);
+
+    setSubmitted(true);
+    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+  } catch (error) {
+    console.error('Error:', error);
+    alert("Submission failed. Please try again.");
+  } finally {
+    setIsSending(false);
+  }
+};
   return (
     <div className="min-h-screen bg-white">
       {/* Header Banner */}

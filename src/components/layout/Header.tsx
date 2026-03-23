@@ -133,7 +133,7 @@ export function Header() {
           onClick={toggleMenu} />
         
           <div className="absolute left-0 right-0 top-full z-40 lg:hidden">
-            <div className="mx-4 mt-2 overflow-hidden rounded-2xl border border-white/40 bg-white/80 shadow-2xl backdrop-blur-xl supports-[backdrop-filter]:bg-white/75">
+            <div className="mx-4 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
               <nav className="p-4">
                 <ul className="space-y-1 font-accent text-base">
                   <li>

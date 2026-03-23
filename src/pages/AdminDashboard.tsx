@@ -250,29 +250,11 @@ export function AdminDashboard() {
   };
   const nextRegStep = () => changeRegStep(1);
   const prevRegStep = () => changeRegStep(-1);
-  const generateRegistrationNumber = () => {
-    const year = new Date().getFullYear();
-    const prefix = `LASH-${year}-`;
-    const highestNumber = contextStudents.reduce((max, student) => {
-      if (!student.id.startsWith(prefix)) {
-        return max;
-      }
-      const sequence = Number(student.id.slice(prefix.length));
-      if (Number.isNaN(sequence)) {
-        return max;
-      }
-      return Math.max(max, sequence);
-    }, 0);
-    const nextNumber = highestNumber + 1;
-    return `${prefix}${String(nextNumber).padStart(4, '0')}`;
-  };
   const handleRegistrationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingReg(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      const newRegNum = generateRegistrationNumber();
-      setNewRegNumber(newRegNum);
       const courseFee = getFeeByCode(regFormData.subclassCode) || 0;
       const totalFee = courseFee + REGISTRATION_FEE;
       const paid = typeof amountPaid === 'number' ? amountPaid : 0;
@@ -282,8 +264,7 @@ export function AdminDashboard() {
       const courseName = selectedSubclass ?
       `${selectedSubclass.code} — ${selectedSubclass.name}` :
       regFormData.drivingCategory;
-      await addStudent({
-        registrationNumber: newRegNum,
+      const createdStudent = await addStudent({
         applicationType: regFormData.applicationType,
         branch: regFormData.branch,
         drivingCategory: regFormData.drivingCategory,
@@ -325,6 +306,7 @@ export function AdminDashboard() {
         status: 'Active',
         enrollmentDate: new Date().toISOString().split('T')[0]
       });
+      setNewRegNumber(createdStudent.id);
       setRegStep(4);
       window.scrollTo(0, 0);
     } catch (error) {

@@ -44,7 +44,7 @@ export function Hero() {
           <div className="relative hidden lg:block">
             <div className="absolute inset-0 overflow-hidden rounded-bl-[3rem]">
               <img
-                src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1760686048/WhatsApp_Image_2025-10-16_at_3.02.26_PM_3_r8ryit.jpg"
+                src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1774100025/Erased_we94cg.png"
                 alt="Student learning to drive"
                 className="w-full h-full object-cover" />
               
