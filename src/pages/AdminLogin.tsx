@@ -285,7 +285,7 @@ export function AdminLogin() {
                 className="text-[#2E8B57] hover:underline text-sm"
                 onClick={() => setShowRegister(true)}
               >
-                {/*Create an admin account*/}
+                Create an admin account
               </button>
             </div>
           </form>
