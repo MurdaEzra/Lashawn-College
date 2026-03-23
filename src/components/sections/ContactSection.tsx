@@ -1,4 +1,4 @@
-import React, { lazy } from 'react';
+import React from 'react';
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { Button } from '../ui/Button';
 export function ContactSection() {

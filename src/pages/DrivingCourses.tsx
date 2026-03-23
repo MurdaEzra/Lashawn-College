@@ -1,9 +1,6 @@
-import React, { Fragment } from 'react';
-import { CourseCard } from '../components/ui/CourseCard';
+import React from 'react';
 import { Button } from '../components/ui/Button';
 import {
-  Phone,
-  CheckCircle,
   Clock,
   Award,
   Shield,

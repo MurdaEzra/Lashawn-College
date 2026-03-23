@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '../components/ui/Button';
-import { Phone, HelpCircle, CheckCircle } from 'lucide-react';
+import { Phone, HelpCircle } from 'lucide-react';
 import { DRIVING_CATEGORIES, REGISTRATION_FEE } from '../data/courseCategories';
 export function Fees() {
   const computerFees = [

@@ -1,11 +1,10 @@
 import React, {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useState
 } from 'react';
 import { supabase } from './supabaseClient';
+import { StudentContext } from './StudentContextContext';
 
 type ContactType = 'next_of_kin' | 'sponsor';
 
@@ -136,7 +135,7 @@ export interface StudentRegistrationPayload {
   enrollmentDate?: string;
 }
 
-interface StudentContextType {
+export interface StudentContextType {
   students: Student[];
   loading: boolean;
   error: string;
@@ -145,8 +144,6 @@ interface StudentContextType {
   updateStudent: (registrationNumber: string, data: Partial<Student>) => Promise<void>;
   deleteStudent: (registrationNumber: string) => Promise<void>;
 }
-
-const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 const toNumber = (value: number | string | null | undefined) => {
   if (typeof value === 'number') {
@@ -592,14 +589,4 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
       {children}
     </StudentContext.Provider>
   );
-}
-
-export function useStudentContext() {
-  const context = useContext(StudentContext);
-
-  if (context === undefined) {
-    throw new Error('useStudentContext must be used within a StudentProvider');
-  }
-
-  return context;
 }

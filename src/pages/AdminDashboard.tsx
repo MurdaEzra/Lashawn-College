@@ -22,7 +22,8 @@ import {
   Copy,
   Printer } from
 'lucide-react';
-import { useStudentContext, Student } from '../contexts/StudentContext';
+import { Student } from '../contexts/StudentContext';
+import { useStudentContext } from '../contexts/useStudentContext';
 import {
   DRIVING_CATEGORIES,
   getFeeByCode,

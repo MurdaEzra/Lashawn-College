@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React from 'react';
 import { Button } from '../components/ui/Button';
 import { ArrowRight } from 'lucide-react';
 export function About() {

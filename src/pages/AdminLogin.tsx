@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/Button';
-import { Lock, Mail, ShieldAlert, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Lock, Mail, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 // import { supabase } from '../contexts/supabaseClient';
 export function AdminLogin() {
   const [email, setEmail] = useState('');

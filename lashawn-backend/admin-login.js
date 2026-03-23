@@ -3,6 +3,7 @@ import cors from 'cors';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
