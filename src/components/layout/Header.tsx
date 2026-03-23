@@ -7,12 +7,12 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/20 bg-white/70 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20 lg:h-24">
+        <div className="flex items-center justify-between h-20 md:h-20 lg:h-24">
           <Link to="/" className="flex items-center flex-shrink-0">
             <img
               src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1774090550/Logo_cmr1we.png"
               alt="Lashawn Driving & Computer College"
-              className="h-20 md:h-60 lg:h-100 w-auto object-contain" />
+              className="h-24 md:h-60 lg:h-100 w-auto object-contain" />
             
           </Link>
 
