@@ -13,12 +13,11 @@ export function AdminLogin() {
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirm, setRegisterConfirm] = useState('');
   const [registerError, setRegisterError] = useState('');
-  const [registerSuccess, setRegisterSuccess] = useState('');
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const navigate = useNavigate();
-  function handleRegister(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setRegisterError('');
-    setRegisterSuccess('');
     if (!registerEmail || !registerPassword) {
       setRegisterError('Email and password are required.');
       return;
@@ -27,25 +26,28 @@ export function AdminLogin() {
       setRegisterError('Passwords do not match.');
       return;
     }
-    fetch('https://lashawn-academy-backend.onrender.com/admin-register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: registerEmail, password: registerPassword })
-    })
-      .then(async (response) => {
-        const result = await response.json();
-        if (!response.ok || !result.success) {
-          setRegisterError(result.error || 'Registration failed.');
-          return;
-        }
-        setRegisterSuccess('Account created! You can now log in.');
-        setRegisterEmail('');
-        setRegisterPassword('');
-        setRegisterConfirm('');
-      })
-      .catch(() => {
-        setRegisterError('Server error. Please try again.');
+    setIsRegisterLoading(true);
+    try {
+      const response = await fetch('https://lashawn-academy-backend.onrender.com/admin-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registerEmail, password: registerPassword })
       });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        setRegisterError(result.error || 'Registration failed.');
+        return;
+      }
+      setEmail(registerEmail);
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setRegisterConfirm('');
+      setShowRegister(false);
+    } catch {
+      setRegisterError('Server error. Please try again.');
+    } finally {
+      setIsRegisterLoading(false);
+    }
   }
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,14 +80,14 @@ export function AdminLogin() {
           <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative">
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-              onClick={() => { setShowRegister(false); setRegisterError(''); setRegisterSuccess(''); }}
+              onClick={() => { setShowRegister(false); setRegisterError(''); }}
               aria-label="Close"
+              disabled={isRegisterLoading}
             >
               ×
             </button>
             <h2 className="text-2xl font-bold mb-4 text-center">Create Admin Account</h2>
             {registerError && <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded">{registerError}</div>}
-            {registerSuccess && <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded">{registerSuccess}</div>}
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold mb-1">Email</label>
@@ -94,6 +96,7 @@ export function AdminLogin() {
                   value={registerEmail}
                   onChange={e => setRegisterEmail(e.target.value)}
                   required
+                  disabled={isRegisterLoading}
                   className="w-full border rounded px-3 py-2"
                   placeholder="admin@email.com"
                 />
@@ -105,6 +108,7 @@ export function AdminLogin() {
                   value={registerPassword}
                   onChange={e => setRegisterPassword(e.target.value)}
                   required
+                  disabled={isRegisterLoading}
                   className="w-full border rounded px-3 py-2"
                   placeholder="Password"
                 />
@@ -116,15 +120,42 @@ export function AdminLogin() {
                   value={registerConfirm}
                   onChange={e => setRegisterConfirm(e.target.value)}
                   required
+                  disabled={isRegisterLoading}
                   className="w-full border rounded px-3 py-2"
                   placeholder="Confirm Password"
                 />
               </div>
               <button
                 type="submit"
-                className="w-full bg-[#2E8B57] text-white py-2 rounded font-semibold hover:bg-[#256d46] transition-colors"
+                disabled={isRegisterLoading}
+                className="w-full bg-[#2E8B57] text-white py-2 rounded font-semibold hover:bg-[#256d46] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                Register
+                {isRegisterLoading ? (
+                  <span className="flex items-center">
+                    <svg
+                      className="animate-spin h-5 w-5 mr-2"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    Creating account...
+                  </span>
+                ) : (
+                  'Register'
+                )}
               </button>
             </form>
           </div>
@@ -283,7 +314,10 @@ export function AdminLogin() {
               <button
                 type="button"
                 className="text-[#2E8B57] hover:underline text-sm"
-                onClick={() => setShowRegister(true)}
+                onClick={() => {
+                  setRegisterError('');
+                  setShowRegister(true);
+                }}
               >
                 Create an admin account
               </button>
