@@ -319,7 +319,7 @@ export function AdminLogin() {
                   setShowRegister(true);
                 }}
               >
-                Create an admin account
+                {/*Create an admin account*/}
               </button>
             </div>
           </form>
