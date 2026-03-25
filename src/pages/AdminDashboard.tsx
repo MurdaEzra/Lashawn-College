@@ -40,6 +40,104 @@ import {
   SERVICE_ICON_OPTIONS,
   ServiceItem } from
 '../data/services';
+import { supabase } from '../contexts/supabaseClient';
+
+interface ServiceInvoice {
+  id: string;
+  invoiceId: string;
+  recordType: 'service';
+  name: string;
+  branch: string;
+  idNumber: string;
+  email: string;
+  phone: string;
+  course: string;
+  feesPaid: number;
+  totalFees: number;
+  pendingDays: number;
+  eligibleForExams: boolean;
+  status: string;
+  enrollmentDate: string;
+  description: string;
+  notes: string;
+  dueDate: string;
+}
+
+type DashboardRecord = (Student & { recordType: 'student'; }) | ServiceInvoice;
+
+interface ServiceInvoiceRow {
+  id: string;
+  invoice_number: string;
+  client_name: string | null;
+  branch: string | null;
+  phone: string | null;
+  email: string | null;
+  service_title: string | null;
+  service_description: string | null;
+  amount: number | string | null;
+  amount_paid: number | string | null;
+  balance: number | string | null;
+  status: string | null;
+  invoice_date: string | null;
+  due_date: string | null;
+  notes: string | null;
+}
+
+const toCurrencyNumber = (value: number | string | null | undefined) => {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
+};
+
+const getDaysUntil = (dateValue: string | null) => {
+  if (!dateValue) {
+    return 0;
+  }
+
+  const dueDate = new Date(dateValue);
+  const today = new Date();
+  dueDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  return Math.max(Math.ceil((dueDate.getTime() - today.getTime()) / 86400000), 0);
+};
+
+const getElapsedDays = (dateValue: string, todayValue: Date) => {
+  const startDate = new Date(dateValue);
+  const today = new Date(todayValue);
+  startDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  return Math.max(Math.floor((today.getTime() - startDate.getTime()) / 86400000), 0);
+};
+
+const mapServiceInvoiceRow = (row: ServiceInvoiceRow): ServiceInvoice => ({
+  id: row.invoice_number,
+  invoiceId: row.id,
+  recordType: 'service',
+  name: row.client_name || '',
+  branch: row.branch || '',
+  idNumber: 'Service Client',
+  email: row.email || '',
+  phone: row.phone || '',
+  course: row.service_title || '',
+  feesPaid: toCurrencyNumber(row.amount_paid),
+  totalFees: toCurrencyNumber(row.amount),
+  pendingDays: getDaysUntil(row.due_date),
+  eligibleForExams: false,
+  status: row.status || 'Pending',
+  enrollmentDate: row.invoice_date || new Date().toISOString().split('T')[0],
+  description: row.service_description || '',
+  notes: row.notes || '',
+  dueDate: row.due_date || ''
+});
 // Fee Structure State
 const DEFAULT_FEES = {
   // Category A
@@ -175,10 +273,14 @@ export function AdminDashboard() {
   } = useStudentContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCourse, setFilterCourse] = useState('All');
-  const [students, setStudents] = useState(contextStudents);
-  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'register' | 'services'>(
+  const [dashboardRecords, setDashboardRecords] = useState<DashboardRecord[]>([]);
+  const [serviceInvoices, setServiceInvoices] = useState<ServiceInvoice[]>([]);
+  const [serviceInvoiceError, setServiceInvoiceError] = useState('');
+  const [serviceInvoiceLoading, setServiceInvoiceLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'register' | 'services' | 'invoice'>(
     'students'
   );
+  const [isTabLoading, setIsTabLoading] = useState(false);
   const [fees, setFees] = useState(DEFAULT_FEES);
   const [services, setServices] = useState<ServiceItem[]>(() => getStoredServices());
   const [editingFee, setEditingFee] = useState<string | null>(null);
@@ -203,9 +305,27 @@ export function AdminDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [editStudentData, setEditStudentData] = useState<Partial<Student>>({});
   const [printMode, setPrintMode] = useState<
-    'none' | 'export' | 'receipt' | 'registration'>(
+    'none' | 'export' | 'receipt' | 'registration' | 'service-invoice'>(
     'none');
+  const [selectedServiceInvoiceForPrint, setSelectedServiceInvoiceForPrint] =
+  useState<ServiceInvoice | null>(null);
+  const [todayMarker, setTodayMarker] = useState(() => new Date());
   const [additionalPayment, setAdditionalPayment] = useState<number | ''>('');
+  const [invoiceStep, setInvoiceStep] = useState(1);
+  const [isSubmittingInvoice, setIsSubmittingInvoice] = useState(false);
+  const [newInvoiceNumber, setNewInvoiceNumber] = useState('');
+  const [invoiceAmountPaid, setInvoiceAmountPaid] = useState<number | ''>('');
+  const [invoiceFormData, setInvoiceFormData] = useState({
+    clientName: '',
+    branch: '',
+    phone: '',
+    email: '',
+    serviceTitle: '',
+    serviceDescription: '',
+    amount: '',
+    dueDate: '',
+    notes: ''
+  });
   // Registration Form State
   const [regStep, setRegStep] = useState(1);
   const [isSubmittingReg, setIsSubmittingReg] = useState(false);
@@ -260,6 +380,19 @@ export function AdminDashboard() {
       } :
       {})
     }));
+  };
+  const handleTabChange = async (
+  nextTab: 'students' | 'fees' | 'register' | 'services' | 'invoice') =>
+  {
+    if (nextTab === activeTab || isTabLoading) {
+      return;
+    }
+
+    setIsTabLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    setActiveTab(nextTab);
+    setIsTabLoading(false);
+    window.scrollTo(0, 0);
   };
   const changeRegStep = async (direction: 1 | -1) => {
     setIsStepLoading(true);
@@ -378,24 +511,231 @@ export function AdminDashboard() {
   const copyRegNumber = () => {
     navigator.clipboard.writeText(newRegNumber);
   };
+  const copyInvoiceNumber = () => {
+    navigator.clipboard.writeText(newInvoiceNumber);
+  };
+  const triggerPrint = (
+  mode: 'export' | 'receipt' | 'registration' | 'service-invoice',
+  fileName: string) =>
+  {
+    const previousTitle = document.title;
+    const normalizedFileName = `${fileName.replace(/[^\w-]+/g, '_')}.pdf`;
+
+    document.title = normalizedFileName;
+    setPrintMode(mode);
+
+    window.setTimeout(() => {
+      window.print();
+      window.setTimeout(() => {
+        document.title = previousTitle;
+      }, 300);
+    }, 100);
+  };
+  const handleInvoiceChange = (
+  e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  {
+    const { name, value } = e.target;
+    setInvoiceFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  const changeInvoiceStep = async (direction: 1 | -1) => {
+    setIsStepLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    setInvoiceStep((prev) => prev + direction);
+    setIsStepLoading(false);
+    window.scrollTo(0, 0);
+  };
+  const nextInvoiceStep = () => changeInvoiceStep(1);
+  const prevInvoiceStep = () => changeInvoiceStep(-1);
+  const resetInvoiceForm = () => {
+    setInvoiceStep(1);
+    setNewInvoiceNumber('');
+    setInvoiceAmountPaid('');
+    setInvoiceFormData({
+      clientName: '',
+      branch: '',
+      phone: '',
+      email: '',
+      serviceTitle: '',
+      serviceDescription: '',
+      amount: '',
+      dueDate: '',
+      notes: ''
+    });
+  };
+  const fetchServiceInvoices = async () => {
+    setServiceInvoiceLoading(true);
+    setServiceInvoiceError('');
+
+    const { data, error } = await supabase
+      .from('service_invoices')
+      .select(
+        `
+          id,
+          invoice_number,
+          client_name,
+          branch,
+          phone,
+          email,
+          service_title,
+          service_description,
+          amount,
+          amount_paid,
+          balance,
+          status,
+          invoice_date,
+          due_date,
+          notes
+        `
+      )
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      setServiceInvoiceError(error.message);
+      setServiceInvoiceLoading(false);
+      return;
+    }
+
+    setServiceInvoices(((data || []) as ServiceInvoiceRow[]).map(mapServiceInvoiceRow));
+    setServiceInvoiceLoading(false);
+  };
+  const getNextServiceInvoiceNumber = async () => {
+    const currentYear = new Date().getFullYear();
+    const { data, error } = await supabase.rpc('next_service_invoice_number', {
+      requested_invoice_year: currentYear
+    });
+
+    if (error || !data) {
+      throw new Error(
+        error?.message ||
+        'Failed to generate the next service invoice number from Supabase.'
+      );
+    }
+
+    return data as string;
+  };
+  const handleServiceInvoiceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingInvoice(true);
+    setServiceInvoiceError('');
+
+    try {
+      const totalAmount = Number(invoiceFormData.amount);
+      const amountPaidValue = typeof invoiceAmountPaid === 'number' ? invoiceAmountPaid : 0;
+      const invoiceNumber = await getNextServiceInvoiceNumber();
+      const balance = Math.max(totalAmount - amountPaidValue, 0);
+      const status =
+        balance === 0 ? 'Paid' : amountPaidValue > 0 ? 'Partially Paid' : 'Pending';
+
+      const { data, error } = await supabase
+        .from('service_invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          client_name: invoiceFormData.clientName,
+          branch: invoiceFormData.branch || null,
+          phone: invoiceFormData.phone || null,
+          email: invoiceFormData.email || null,
+          service_title: invoiceFormData.serviceTitle,
+          service_description: invoiceFormData.serviceDescription || null,
+          amount: totalAmount,
+          amount_paid: amountPaidValue,
+          balance,
+          status,
+          invoice_date: new Date().toISOString().split('T')[0],
+          due_date: invoiceFormData.dueDate || null,
+          notes: invoiceFormData.notes || null
+        })
+        .select(
+          `
+            id,
+            invoice_number,
+            client_name,
+            branch,
+            phone,
+            email,
+            service_title,
+            service_description,
+            amount,
+            amount_paid,
+            balance,
+            status,
+            invoice_date,
+            due_date,
+            notes
+          `
+        )
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message || 'Failed to save service invoice.');
+      }
+
+      const createdInvoice = mapServiceInvoiceRow(data as ServiceInvoiceRow);
+      setServiceInvoices((prev) => [createdInvoice, ...prev]);
+      setSelectedServiceInvoiceForPrint(createdInvoice);
+      setNewInvoiceNumber(invoiceNumber);
+      setInvoiceStep(3);
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Failed to save service invoice', error);
+      const message =
+        error instanceof Error ?
+        error.message :
+        'Failed to save service invoice to Supabase.';
+      setServiceInvoiceError(message);
+      window.alert(message);
+    } finally {
+      setIsSubmittingInvoice(false);
+    }
+  };
   // Get selected category object to populate subclasses
   const selectedCategoryObj = DRIVING_CATEGORIES.find(
     (c) => c.code === regFormData.drivingCategory
   );
   useEffect(() => {
-    let filtered = contextStudents;
+    void fetchServiceInvoices();
+  }, []);
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setTodayMarker(new Date());
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+  useEffect(() => {
+    const combinedRecords: DashboardRecord[] = [
+      ...contextStudents.map((student) => ({
+        ...student,
+        recordType: 'student' as const
+      })),
+      ...serviceInvoices
+    ];
+    let filtered = combinedRecords;
     if (searchTerm) {
       filtered = filtered.filter(
-        (s) =>
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.id.toLowerCase().includes(searchTerm.toLowerCase())
+        (record) =>
+        record.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.course.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     if (filterCourse !== 'All') {
-      filtered = filtered.filter((s) => s.course.includes(filterCourse));
+      filtered = filtered.filter((record) => {
+        if (filterCourse === 'Students') {
+          return record.recordType === 'student';
+        }
+
+        if (filterCourse === 'Services') {
+          return record.recordType === 'service';
+        }
+
+        return record.recordType === 'student' && record.course.includes(filterCourse);
+      });
     }
-    setStudents(filtered);
-  }, [searchTerm, filterCourse, contextStudents]);
+    setDashboardRecords(filtered);
+  }, [searchTerm, filterCourse, contextStudents, serviceInvoices]);
   // Close action menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -407,14 +747,23 @@ export function AdminDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
   const totalStudents = contextStudents.length;
-  const eligibleStudents = contextStudents.filter(
-    (s) => s.eligibleForExams
-  ).length;
-  const totalRevenue = contextStudents.reduce((sum, s) => sum + s.feesPaid, 0);
-  const pendingFees = contextStudents.reduce(
+  const totalServiceClients = serviceInvoices.length;
+  const totalRecords = totalStudents + totalServiceClients;
+  const totalRevenue =
+  contextStudents.reduce((sum, s) => sum + s.feesPaid, 0) +
+  serviceInvoices.reduce((sum, invoice) => sum + invoice.feesPaid, 0);
+  const pendingFees =
+  contextStudents.reduce(
     (sum, s) => sum + (s.totalFees - s.feesPaid),
     0
-  );
+  ) +
+  serviceInvoices.reduce((sum, invoice) => sum + (invoice.totalFees - invoice.feesPaid), 0);
+  const getRemainingStudentDays = (pendingDays: number, enrollmentDate: string) =>
+  Math.max(pendingDays - getElapsedDays(enrollmentDate, todayMarker), 0);
+  const getRecordPendingDays = (record: DashboardRecord) =>
+  record.recordType === 'student' ?
+  getRemainingStudentDays(record.pendingDays, record.enrollmentDate) :
+  record.pendingDays;
   const startEditingFee = (category: string) => {
     setEditingFee(category);
     setEditValues(fees[category as keyof typeof fees]);
@@ -536,6 +885,66 @@ export function AdminDashboard() {
     }
     setOpenActionMenu(null);
   };
+  const handleMarkServiceInvoicePaid = async (
+  invoiceNumber: string,
+  invoiceId: string,
+  totalAmount: number) =>
+  {
+    setStudentActionLoadingId(`mark-paid-${invoiceNumber}`);
+    try {
+      const { error } = await supabase
+        .from('service_invoices')
+        .update({
+          amount_paid: totalAmount,
+          balance: 0,
+          status: 'Paid'
+        })
+        .eq('id', invoiceId);
+
+      if (error) {
+        throw error;
+      }
+
+      setServiceInvoices((prev) =>
+      prev.map((invoice) =>
+      invoice.id === invoiceNumber ?
+      {
+        ...invoice,
+        feesPaid: totalAmount,
+        status: 'Paid'
+      } :
+      invoice
+      )
+      );
+    } catch (error) {
+      console.error('Failed to mark service invoice as paid', error);
+      window.alert('Failed to update service invoice payment in Supabase.');
+    }
+    setStudentActionLoadingId(null);
+    setOpenActionMenu(null);
+  };
+  const handleDeleteServiceInvoice = async (invoiceNumber: string, invoiceId: string) => {
+    if (window.confirm('Are you sure you want to delete this service invoice?')) {
+      setStudentActionLoadingId(`delete-${invoiceNumber}`);
+      try {
+        const { error } = await supabase
+          .from('service_invoices')
+          .delete()
+          .eq('id', invoiceId);
+
+        if (error) {
+          throw error;
+        }
+
+        setServiceInvoices((prev) => prev.filter((invoice) => invoice.id !== invoiceNumber));
+      } catch (error) {
+        console.error('Failed to delete service invoice', error);
+        window.alert('Failed to delete service invoice from Supabase.');
+      }
+      setStudentActionLoadingId(null);
+    }
+    setOpenActionMenu(null);
+  };
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
       {/* Admin Header */}
@@ -547,7 +956,7 @@ export function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-xl font-bold">Lashawn Admin Portal</h1>
-              <p className="text-xs text-gray-400">Student Management System</p>
+              <p className="text-xs text-gray-400">Student & Service Management System</p>
             </div>
           </div>
           
@@ -560,9 +969,19 @@ export function AdminDashboard() {
             {studentError}
           </div>
         }
+        {serviceInvoiceError &&
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            {serviceInvoiceError}
+          </div>
+        }
         {studentsLoading &&
         <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-700">
-            Loading student records from Supabase...
+            Loading student records...
+          </div>
+        }
+        {serviceInvoiceLoading &&
+        <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-700">
+            Loading service invoices...
           </div>
         }
         {/* Stats Cards */}
@@ -573,10 +992,10 @@ export function AdminDashboard() {
             </div>
             <div>
               <p className="text-sm text-gray-500 font-medium">
-                Total Students
+                Total Records
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {totalStudents}
+                {totalRecords}
               </p>
             </div>
           </div>
@@ -585,15 +1004,26 @@ export function AdminDashboard() {
               <GraduationCap className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 font-medium">Exam Eligible</p>
+              <p className="text-sm text-gray-500 font-medium">Student Registrations</p>
               <p className="text-2xl font-bold text-gray-900">
-                {eligibleStudents}
+                {totalStudents}
               </p>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center">
             <div className="bg-emerald-100 p-4 rounded-full mr-4">
               <CreditCard className="h-6 w-6 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Service Clients</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {totalServiceClients}
+              </p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center">
+            <div className="bg-orange-100 p-4 rounded-full mr-4">
+              <Clock className="h-6 w-6 text-orange-600" />
             </div>
             <div>
               <p className="text-sm text-gray-500 font-medium">Total Revenue</p>
@@ -603,11 +1033,11 @@ export function AdminDashboard() {
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center">
-            <div className="bg-orange-100 p-4 rounded-full mr-4">
-              <Clock className="h-6 w-6 text-orange-600" />
+            <div className="bg-red-100 p-4 rounded-full mr-4">
+              <DollarSign className="h-6 w-6 text-red-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 font-medium">Pending Fees</p>
+              <p className="text-sm text-gray-500 font-medium">Pending Balance</p>
               <p className="text-2xl font-bold text-gray-900">
                 KSh {pendingFees.toLocaleString()}
               </p>
@@ -618,28 +1048,40 @@ export function AdminDashboard() {
         {/* Tab Navigation */}
         <div className="flex border-b border-gray-200 mb-0 overflow-x-auto">
           <button
-            onClick={() => setActiveTab('students')}
+            onClick={() => void handleTabChange('students')}
+            disabled={isTabLoading}
             className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'students' ? 'border-[#2E8B57] text-[#2E8B57]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             
             <Users className="h-4 w-4 inline mr-2" />
             Student Directory
           </button>
           <button
-            onClick={() => setActiveTab('register')}
+            onClick={() => void handleTabChange('register')}
+            disabled={isTabLoading}
             className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'register' ? 'border-[#2E8B57] text-[#2E8B57]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             
             <UserPlus className="h-4 w-4 inline mr-2" />
             Register Student
           </button>
           <button
-            onClick={() => setActiveTab('fees')}
+            onClick={() => void handleTabChange('invoice')}
+            disabled={isTabLoading}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'invoice' ? 'border-[#2E8B57] text-[#2E8B57]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            
+            <Briefcase className="h-4 w-4 inline mr-2" />
+            Invoice Service
+          </button>
+          <button
+            onClick={() => void handleTabChange('fees')}
+            disabled={isTabLoading}
             className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'fees' ? 'border-[#2E8B57] text-[#2E8B57]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             
             <DollarSign className="h-4 w-4 inline mr-2" />
             Fee Structure
           </button>
           <button
-            onClick={() => setActiveTab('services')}
+            onClick={() => void handleTabChange('services')}
+            disabled={isTabLoading}
             className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'services' ? 'border-[#2E8B57] text-[#2E8B57]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             
             <Briefcase className="h-4 w-4 inline mr-2" />
@@ -647,12 +1089,28 @@ export function AdminDashboard() {
           </button>
         </div>
 
+        {isTabLoading &&
+        <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
+            <div className="flex min-h-[320px] flex-col items-center justify-center px-6 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#2E8B57]/10 text-[#2E8B57]">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Opening dashboard tab
+              </h3>
+              <p className="mt-2 max-w-md text-sm text-gray-500">
+                Preparing the selected section and syncing the latest admin data.
+              </p>
+            </div>
+          </div>
+        }
+
         {/* Students Tab */}
-        {activeTab === 'students' &&
+        {!isTabLoading && activeTab === 'students' &&
         <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
             <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <h2 className="text-lg font-bold text-gray-800">
-                All Admitted Students
+                All Admitted Students and Services
               </h2>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative">
@@ -661,7 +1119,7 @@ export function AdminDashboard() {
                   </div>
                   <input
                   type="text"
-                  placeholder="Search by name or ID..."
+                  placeholder="Search by name, reference, or service..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none w-full sm:w-64" />
@@ -677,6 +1135,8 @@ export function AdminDashboard() {
                   className="pl-9 pr-8 py-2 border border-gray-300 rounded-md text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none appearance-none bg-white w-full sm:w-auto">
                   
                     <option value="All">All Courses</option>
+                    <option value="Students">Students Only</option>
+                    <option value="Services">Services Only</option>
                     <option value="Category">Driving Courses</option>
                     <option value="Microsoft">Computer Courses</option>
                     <option value="Basic IT">IT Courses</option>
@@ -684,8 +1144,7 @@ export function AdminDashboard() {
                 </div>
                 <button
                 onClick={() => {
-                  setPrintMode('export');
-                  setTimeout(() => window.print(), 100);
+                  triggerPrint('export', 'student_service_records_report');
                 }}
                 className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors border border-gray-300">
                 
@@ -698,62 +1157,69 @@ export function AdminDashboard() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-                    <th className="px-6 py-4 font-semibold">Reg No. & Name</th>
-                    <th className="px-6 py-4 font-semibold">Course Enrolled</th>
+                    <th className="px-6 py-4 font-semibold">Reference & Name</th>
+                    <th className="px-6 py-4 font-semibold">Type</th>
+                    <th className="px-6 py-4 font-semibold">Course / Service</th>
                     <th className="px-6 py-4 font-semibold">Fees Status</th>
-                    <th className="px-6 py-4 font-semibold">Pending Days</th>
-                    <th className="px-6 py-4 font-semibold">
-                      Exam Eligibility
-                    </th>
+                    <th className="px-6 py-4 font-semibold">Due / Pending</th>
+                    <th className="px-6 py-4 font-semibold">Status</th>
                     <th className="px-6 py-4 font-semibold text-right">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {students.length > 0 ?
-                students.map((student) => {
+                  {dashboardRecords.length > 0 ?
+                dashboardRecords.map((record) => {
                   const feePercentage =
-                  student.feesPaid / student.totalFees * 100;
+                  record.totalFees > 0 ? record.feesPaid / record.totalFees * 100 : 0;
                   const isFullyPaid = feePercentage === 100;
+                  const displayPendingDays = getRecordPendingDays(record);
                   return (
                     <tr
-                      key={student.id}
+                      key={record.id}
                       onClick={() => {
-                        setSelectedStudent(student);
-                        setEditStudentData(student);
-                        setIsEditing(false);
+                        if (record.recordType === 'student') {
+                          setSelectedStudent(record);
+                          setEditStudentData(record);
+                          setIsEditing(false);
+                        }
                       }}
-                      className="hover:bg-gray-50 transition-colors cursor-pointer">
+                      className={`hover:bg-gray-50 transition-colors ${record.recordType === 'student' ? 'cursor-pointer' : ''}`}>
                       
                           <td className="px-6 py-4">
                             <div className="flex items-center">
-                              <div className="h-10 w-10 rounded-full bg-[#2E8B57]/10 text-[#2E8B57] flex items-center justify-center font-bold text-sm mr-3">
-                                {student.name.charAt(0)}
+                              <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm mr-3 ${record.recordType === 'student' ? 'bg-[#2E8B57]/10 text-[#2E8B57]' : 'bg-blue-100 text-blue-700'}`}>
+                                {record.name.charAt(0)}
                               </div>
                               <div>
                                 <p className="font-medium text-gray-900">
-                                  {student.name}
+                                  {record.name}
                                 </p>
                                 <p className="text-xs text-gray-500 font-mono">
-                                  {student.id}
+                                  {record.id}
                                 </p>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${record.recordType === 'student' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                              {record.recordType === 'student' ? 'Student' : 'Service'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
                             <span className="text-sm text-gray-700">
-                              {student.course}
+                              {record.course}
                             </span>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-sm font-medium text-gray-900">
-                                  KSh {student.feesPaid.toLocaleString()}
+                                  KSh {record.feesPaid.toLocaleString()}
                                 </span>
                                 <span className="text-xs text-gray-500">
-                                  / {student.totalFees.toLocaleString()}
+                                  / {record.totalFees.toLocaleString()}
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -768,45 +1234,37 @@ export function AdminDashboard() {
                           <span className="text-xs text-orange-600 mt-1 font-medium">
                                   Balance: KSh{' '}
                                   {(
-                            student.totalFees - student.feesPaid).
+                            record.totalFees - record.feesPaid).
                             toLocaleString()}
                                 </span>
                           }
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            {student.pendingDays > 0 ?
+                            {displayPendingDays > 0 ?
                         <div className="flex items-center text-sm text-gray-700">
                                 <Clock className="h-4 w-4 text-blue-500 mr-1.5" />
-                                {student.pendingDays} days left
+                                {displayPendingDays} days left
                               </div> :
 
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Completed
+                                {record.recordType === 'student' ? 'Completed' : 'Due Today'}
                               </span>
                         }
                           </td>
                           <td className="px-6 py-4">
-                            {student.eligibleForExams ?
-                        <div className="flex items-center text-sm text-green-600 font-medium">
-                                <CheckCircle className="h-4 w-4 mr-1.5" />
-                                Eligible
-                              </div> :
-
-                        <div className="flex items-center text-sm text-red-600 font-medium">
-                                <XCircle className="h-4 w-4 mr-1.5" />
-                                Not Eligible
-                              </div>
-                        }
+                            <div className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${record.status === 'Active' || record.status === 'Paid' ? 'bg-green-100 text-green-800' : record.status === 'Partially Paid' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
+                              {record.status}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-right relative">
                             <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenActionMenu(
-                              openActionMenu === student.id ?
+                              openActionMenu === record.id ?
                               null :
-                              student.id
+                              record.id
                             );
                           }}
                           className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors">
@@ -814,7 +1272,7 @@ export function AdminDashboard() {
                               <MoreVertical className="h-5 w-5" />
                             </button>
 
-                            {openActionMenu === student.id &&
+                            {openActionMenu === record.id &&
                         <div
                           ref={menuRef}
                           onClick={(e) => e.stopPropagation()}
@@ -822,51 +1280,64 @@ export function AdminDashboard() {
                           
                                 {!isFullyPaid &&
                           <button
-                            onClick={() =>
-                            handleMarkPaid(
-                              student.id,
-                              student.totalFees
-                            )
-                            }
+                            onClick={() => {
+                              if (record.recordType === 'student') {
+                                void handleMarkPaid(record.id, record.totalFees);
+                                return;
+                              }
+
+                              void handleMarkServiceInvoicePaid(
+                                record.id,
+                                record.invoiceId,
+                                record.totalFees
+                              );
+                            }}
                             disabled={studentActionLoadingId !== null}
                             className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
                             
-                                    {studentActionLoadingId === `mark-paid-${student.id}` ?
+                                    {studentActionLoadingId === `mark-paid-${record.id}` ?
                               <Loader2 className="h-4 w-4 mr-2 animate-spin text-green-500" /> :
                               <Check className="h-4 w-4 mr-2 text-green-500" />
                               }
-                                    {studentActionLoadingId === `mark-paid-${student.id}` ? 'Updating...' : 'Mark as Fully Paid'}
+                                    {studentActionLoadingId === `mark-paid-${record.id}` ? 'Updating...' : 'Mark as Fully Paid'}
                                   </button>
                           }
+                                {record.recordType === 'student' &&
                                 <button
                             onClick={() =>
                             handleToggleEligibility(
-                              student.id,
-                              student.eligibleForExams
+                              record.id,
+                              record.eligibleForExams
                             )
                             }
                             disabled={studentActionLoadingId !== null}
                             className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
                             
-                                  {studentActionLoadingId === `toggle-eligibility-${student.id}` ?
+                                  {studentActionLoadingId === `toggle-eligibility-${record.id}` ?
                             <Loader2 className="h-4 w-4 mr-2 animate-spin text-blue-500" /> :
                             <Award className="h-4 w-4 mr-2 text-blue-500" />
                             }
-                                  {studentActionLoadingId === `toggle-eligibility-${student.id}` ? 'Updating...' : 'Toggle Eligibility'}
+                                  {studentActionLoadingId === `toggle-eligibility-${record.id}` ? 'Updating...' : 'Toggle Eligibility'}
                                 </button>
+                                }
                                 <div className="border-t border-gray-100 my-1"></div>
                                 <button
-                            onClick={() =>
-                            handleDeleteStudent(student.id)
-                            }
+                            onClick={() => {
+                              if (record.recordType === 'student') {
+                                void handleDeleteStudent(record.id);
+                                return;
+                              }
+
+                              void handleDeleteServiceInvoice(record.id, record.invoiceId);
+                            }}
                             disabled={studentActionLoadingId !== null}
                             className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
                             
-                                  {studentActionLoadingId === `delete-${student.id}` ?
+                                  {studentActionLoadingId === `delete-${record.id}` ?
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" /> :
                             <Trash2 className="h-4 w-4 mr-2" />
                             }
-                                  {studentActionLoadingId === `delete-${student.id}` ? 'Deleting...' : 'Delete Student'}
+                                  {studentActionLoadingId === `delete-${record.id}` ? 'Deleting...' : `Delete ${record.recordType === 'student' ? 'Student' : 'Invoice'}`}
                                 </button>
                               </div>
                         }
@@ -875,14 +1346,14 @@ export function AdminDashboard() {
 
                 }) :
 
-                <tr>
+                    <tr>
                       <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-6 py-12 text-center text-gray-500">
                     
                         <div className="flex flex-col items-center justify-center">
                           <Search className="h-8 w-8 text-gray-300 mb-2" />
-                          <p>No students found matching your criteria.</p>
+                          <p>No student or service records found matching your criteria.</p>
                         </div>
                       </td>
                     </tr>
@@ -892,9 +1363,9 @@ export function AdminDashboard() {
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
               <span className="text-sm text-gray-600">
-                Showing <span className="font-medium">{students.length}</span>{' '}
-                of <span className="font-medium">{contextStudents.length}</span>{' '}
-                students
+                Showing <span className="font-medium">{dashboardRecords.length}</span>{' '}
+                of <span className="font-medium">{totalRecords}</span>{' '}
+                records
               </span>
               <div className="flex space-x-2">
                 <button
@@ -914,8 +1385,288 @@ export function AdminDashboard() {
           </div>
         }
 
+        {/* Service Invoice Tab */}
+        {!isTabLoading && activeTab === 'invoice' &&
+        <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-800">
+                Invoice Service for Client
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Capture completed services, invoice the client, and save the record.
+              </p>
+            </div>
+            <div className="p-6">
+              {invoiceStep < 3 &&
+              <div className="flex items-center mb-8">
+                  {[1, 2].map((step) =>
+                <Fragment key={step}>
+                      <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold ${invoiceStep >= step ? 'bg-[#2E8B57] text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    
+                        {step}
+                      </div>
+                      {step < 2 &&
+                  <div
+                    className={`flex-1 h-1 mx-2 rounded ${invoiceStep > step ? 'bg-[#2E8B57]' : 'bg-gray-200'}`}>
+                  </div>
+                  }
+                    </Fragment>
+                )}
+                  <div className="ml-4 text-sm text-gray-500">
+                    Step {invoiceStep} of 2
+                  </div>
+                </div>
+              }
+
+              {invoiceStep === 1 &&
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void nextInvoiceStep();
+                }}
+                className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Client Name
+                      </label>
+                      <input
+                        type="text"
+                        name="clientName"
+                        value={invoiceFormData.clientName}
+                        onChange={handleInvoiceChange}
+                        required
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Enter client name" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={invoiceFormData.phone}
+                        onChange={handleInvoiceChange}
+                        required
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Enter phone number" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Branch
+                      </label>
+                      <input
+                        type="text"
+                        name="branch"
+                        value={invoiceFormData.branch}
+                        onChange={handleInvoiceChange}
+                        required
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Enter branch name" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={invoiceFormData.email}
+                        onChange={handleInvoiceChange}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Optional email address" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isStepLoading}
+                      className="bg-[#2E8B57] text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-[#267349] transition-colors disabled:opacity-50">
+                      
+                      Continue
+                    </button>
+                  </div>
+                </form>
+              }
+
+              {invoiceStep === 2 &&
+              <form onSubmit={handleServiceInvoiceSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Service Title
+                      </label>
+                      <input
+                        type="text"
+                        name="serviceTitle"
+                        value={invoiceFormData.serviceTitle}
+                        onChange={handleInvoiceChange}
+                        required
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Enter service title" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Service Description
+                      </label>
+                      <textarea
+                        name="serviceDescription"
+                        value={invoiceFormData.serviceDescription}
+                        onChange={handleInvoiceChange}
+                        rows={4}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Describe the work delivered" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Invoice Amount (KSh)
+                      </label>
+                      <input
+                        type="number"
+                        name="amount"
+                        min={1}
+                        value={invoiceFormData.amount}
+                        onChange={handleInvoiceChange}
+                        required
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Enter total amount" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Amount Paid (KSh)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={invoiceFormData.amount ? Number(invoiceFormData.amount) : undefined}
+                        value={invoiceAmountPaid}
+                        onChange={(e) =>
+                        setInvoiceAmountPaid(
+                          e.target.value ? Number(e.target.value) : ''
+                        )
+                        }
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Optional upfront payment" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Due Date
+                      </label>
+                      <input
+                        type="date"
+                        name="dueDate"
+                        value={invoiceFormData.dueDate}
+                        onChange={handleInvoiceChange}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Internal Notes
+                      </label>
+                      <input
+                        type="text"
+                        name="notes"
+                        value={invoiceFormData.notes}
+                        onChange={handleInvoiceChange}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none"
+                        placeholder="Optional notes" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <button
+                      type="button"
+                      onClick={() => void prevInvoiceStep()}
+                      disabled={isSubmittingInvoice || isStepLoading}
+                      className="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
+                      
+                      ← Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={
+                        isSubmittingInvoice ||
+                        !invoiceFormData.amount ||
+                        (typeof invoiceAmountPaid === 'number' &&
+                        invoiceAmountPaid > Number(invoiceFormData.amount))
+                      }
+                      className="bg-[#2E8B57] text-white px-8 py-2.5 rounded-md text-sm font-medium hover:bg-[#267349] transition-colors disabled:opacity-50 flex items-center">
+                      
+                      {isSubmittingInvoice &&
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      }
+                      {isSubmittingInvoice ? 'Saving Invoice...' : 'Create Invoice'}
+                    </button>
+                  </div>
+                </form>
+              }
+
+              {invoiceStep === 3 &&
+              <div className="text-center py-8">
+                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                    <CheckCircle className="h-8 w-8 text-[#2E8B57]" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    Service Invoice Saved!
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    The service invoice has been added!
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-6 inline-block mb-6 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">
+                      Invoice Number
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-2xl font-mono font-bold text-[#2E8B57]">
+                        {newInvoiceNumber}
+                      </p>
+                      <button
+                    onClick={copyInvoiceNumber}
+                    className="p-2 text-gray-400 hover:text-[#2E8B57] hover:bg-[#2E8B57]/10 rounded-md transition-colors"
+                    title="Copy">
+                        
+                        <Copy className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-center gap-4">
+                      <button
+                      onClick={() => {
+                        const latestInvoice = serviceInvoices.find(
+                          (invoice) => invoice.id === newInvoiceNumber
+                        ) || selectedServiceInvoiceForPrint;
+                        setSelectedServiceInvoiceForPrint(latestInvoice || null);
+                        if (latestInvoice) {
+                          triggerPrint('service-invoice', latestInvoice.id);
+                        }
+                      }}
+                      className="bg-gray-800 text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors flex items-center">
+                      
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print Invoice
+                    </button>
+                    <button
+                      onClick={resetInvoiceForm}
+                      className="bg-[#2E8B57] text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-[#267349] transition-colors">
+                      
+                      Invoice Another Service
+                    </button>
+                    <button
+                      onClick={() => void handleTabChange('students')}
+                      className="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
+                      
+                      View All Records
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
         {/* Fee Structure Tab */}
-        {activeTab === 'fees' &&
+        {!isTabLoading && activeTab === 'fees' &&
         <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <div>
@@ -1356,7 +2107,7 @@ export function AdminDashboard() {
         }
 
         {/* Services Tab */}
-        {activeTab === 'services' &&
+        {!isTabLoading && activeTab === 'services' &&
         <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
             <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
@@ -1500,7 +2251,7 @@ export function AdminDashboard() {
         }
 
         {/* Register Student Tab */}
-        {activeTab === 'register' &&
+        {!isTabLoading && activeTab === 'register' &&
         <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-lg font-bold text-gray-800">
@@ -2051,8 +2802,7 @@ export function AdminDashboard() {
                   <div className="flex justify-center gap-4">
                     <button
                   onClick={() => {
-                    setPrintMode('registration');
-                    setTimeout(() => window.print(), 100);
+                    triggerPrint('registration', newRegNumber);
                   }}
                   className="bg-gray-800 text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors flex items-center">
                   
@@ -2066,7 +2816,7 @@ export function AdminDashboard() {
                       Register Another Student
                     </button>
                     <button
-                  onClick={() => setActiveTab('students')}
+                  onClick={() => void handleTabChange('students')}
                   className="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
                   
                       View Students
@@ -2107,8 +2857,7 @@ export function AdminDashboard() {
                 {!isEditing &&
               <button
                 onClick={() => {
-                  setPrintMode('receipt');
-                  setTimeout(() => window.print(), 100);
+                  triggerPrint('receipt', selectedStudent.id);
                 }}
                 className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium">
                 
@@ -2426,8 +3175,11 @@ export function AdminDashboard() {
                           <dt className="text-xs text-gray-500">
                             Pending Days
                           </dt>
-                          <dd className="text-sm font-medium text-gray-900">
-                            {selectedStudent.pendingDays} days
+                      <dd className="text-sm font-medium text-gray-900">
+                            {getRemainingStudentDays(
+                          selectedStudent.pendingDays,
+                          selectedStudent.enrollmentDate
+                        )} days
                           </dd>
                         </div>
                         <div>
@@ -2594,9 +3346,9 @@ export function AdminDashboard() {
         <div className="max-w-3xl mx-auto border-2 border-gray-800 p-8">
             <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-6">
               <img
-              src="/Lashawn_Logo-removebg-preview.png"
+              src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1774090550/Logo_cmr1we.png"
               alt="Logo"
-              className="h-16 object-contain" />
+              className="h-24 md:h-60 lg:h-100 w-auto object-contain" />
             
               <div className="text-center flex-1 px-4">
                 <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-widest">
@@ -2782,9 +3534,9 @@ export function AdminDashboard() {
         <div>
             <div className="flex items-center justify-between border-b-2 border-gray-800 pb-4 mb-6">
               <img
-              src="/Lashawn_Logo-removebg-preview.png"
+              src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1774090550/Logo_cmr1we.png"
               alt="Logo"
-              className="h-12 object-contain" />
+              className="h-24 md:h-60 lg:h-100 w-auto object-contain" />
             
               <div className="text-right">
                 <h1 className="text-2xl font-bold text-gray-900 uppercase">
@@ -2856,9 +3608,9 @@ export function AdminDashboard() {
         <div className="max-w-3xl mx-auto border-2 border-gray-800 p-8">
             <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-6">
               <img
-              src="/Lashawn_Logo-removebg-preview.png"
+              src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1774090550/Logo_cmr1we.png"
               alt="Logo"
-              className="h-16 object-contain" />
+              className="h-24 md:h-60 lg:h-100 w-auto object-contain" />
             
               <div className="text-center flex-1 px-4">
                 <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-widest">
@@ -2998,6 +3750,182 @@ export function AdminDashboard() {
               <img
               src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`RECEIPT|${selectedStudent.id}|${selectedStudent.feesPaid}`)}`}
               alt="Verification QR Code"
+              className="w-16 h-16" />
+            
+              <div className="text-center">
+                <div className="w-48 border-b border-gray-800 mb-2"></div>
+                <p className="text-xs font-bold uppercase">
+                  Authorized Signature & Stamp
+                </p>
+              </div>
+            </div>
+          </div>
+        }
+
+        {printMode === 'service-invoice' && selectedServiceInvoiceForPrint &&
+        <div className="max-w-3xl mx-auto border-2 border-gray-800 p-8">
+            <div className="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-6">
+              <img
+              src="https://res.cloudinary.com/dgfmhyebp/image/upload/v1774090550/Logo_cmr1we.png"
+              alt="Logo"
+              className="h-24 md:h-60 lg:h-100 w-auto object-contain" />
+            
+              <div className="text-center flex-1 px-4">
+                <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-widest">
+                  SERVICE INVOICE
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Lashawn Driving School and Computer College
+                </p>
+                <p className="text-xs text-gray-500">
+                  Along Eldoret Roadblock, Opposite Khetias Supermarket
+                </p>
+                <p className="text-xs text-gray-500">Tel: +254 117 564 318</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-gray-500 uppercase">
+                  Invoice No.
+                </p>
+                <p className="text-lg font-mono font-bold text-red-600">
+                  {selectedServiceInvoiceForPrint.id}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Date: {new Date(
+                selectedServiceInvoiceForPrint.enrollmentDate
+              ).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8 mb-8">
+              <div>
+                <h3 className="text-xs font-bold text-gray-500 uppercase border-b border-gray-300 pb-1 mb-3">
+                  Client Details
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="font-semibold w-24 inline-block">
+                      Name:
+                    </span>{' '}
+                    {selectedServiceInvoiceForPrint.name}
+                  </p>
+                  <p>
+                    <span className="font-semibold w-24 inline-block">
+                      Phone:
+                    </span>{' '}
+                    {selectedServiceInvoiceForPrint.phone || '-'}
+                  </p>
+                  <p>
+                    <span className="font-semibold w-24 inline-block">
+                      Branch:
+                    </span>{' '}
+                    {selectedServiceInvoiceForPrint.branch || '-'}
+                  </p>
+                  <p>
+                    <span className="font-semibold w-24 inline-block">
+                      Email:
+                    </span>{' '}
+                    {selectedServiceInvoiceForPrint.email || '-'}
+                  </p>
+                  <p>
+                    <span className="font-semibold w-24 inline-block">
+                      Status:
+                    </span>{' '}
+                    {selectedServiceInvoiceForPrint.status}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-gray-500 uppercase border-b border-gray-300 pb-1 mb-3">
+                  Service Details
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="font-semibold w-24 inline-block">
+                      Service:
+                    </span>{' '}
+                    {selectedServiceInvoiceForPrint.course}
+                  </p>
+                  <p>
+                    <span className="font-semibold w-24 inline-block">
+                      Due Date:
+                    </span>{' '}
+                    {selectedServiceInvoiceForPrint.dueDate ?
+                  new Date(selectedServiceInvoiceForPrint.dueDate).toLocaleDateString() :
+                  '-'}
+                  </p>
+                  <p>
+                    <span className="font-semibold w-24 inline-block">
+                      Notes:
+                    </span>{' '}
+                    {selectedServiceInvoiceForPrint.notes || '-'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <h3 className="text-xs font-bold text-gray-500 uppercase border-b border-gray-300 pb-1 mb-3">
+                Description
+              </h3>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {selectedServiceInvoiceForPrint.description || 'No service description provided.'}
+              </p>
+            </div>
+
+            <h3 className="text-xs font-bold text-gray-500 uppercase border-b border-gray-300 pb-1 mb-3">
+              Payment Summary
+            </h3>
+            <table className="w-full text-left mb-8 border border-gray-300">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-3 font-semibold border-b border-gray-300">
+                    Description
+                  </th>
+                  <th className="p-3 font-semibold border-b border-gray-300 text-right">
+                    Amount (KSh)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-3 border-b border-gray-200">
+                    Service Charge
+                  </td>
+                  <td className="p-3 border-b border-gray-200 text-right font-medium">
+                    {selectedServiceInvoiceForPrint.totalFees.toLocaleString()}
+                  </td>
+                </tr>
+                <tr className="bg-green-50">
+                  <td className="p-3 border-b border-gray-200 font-bold text-green-800">
+                    Amount Paid
+                  </td>
+                  <td className="p-3 border-b border-gray-200 text-right font-bold text-green-800">
+                    {selectedServiceInvoiceForPrint.feesPaid.toLocaleString()}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-3 font-bold text-gray-800">
+                    Outstanding Balance
+                  </td>
+                  <td className="p-3 text-right font-bold text-red-600">
+                    {(
+                  selectedServiceInvoiceForPrint.totalFees -
+                  selectedServiceInvoiceForPrint.feesPaid).
+                  toLocaleString()}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="flex justify-between items-end mt-16 pt-8 border-t border-gray-300">
+              <div className="text-center">
+                <div className="w-48 border-b border-gray-800 mb-2"></div>
+                <p className="text-xs font-bold uppercase">Client Signature</p>
+              </div>
+              <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`SERVICE-INVOICE|${selectedServiceInvoiceForPrint.id}|${selectedServiceInvoiceForPrint.totalFees}`)}`}
+              alt="Invoice QR Code"
               className="w-16 h-16" />
             
               <div className="text-center">
