@@ -20,7 +20,10 @@ import {
   Award,
   UserPlus,
   Copy,
-  Printer } from
+  Printer,
+  PlusCircle,
+  Briefcase,
+  Loader2 } from
 'lucide-react';
 import { Student } from '../contexts/StudentContext';
 import { useStudentContext } from '../contexts/useStudentContext';
@@ -30,6 +33,13 @@ import {
   REGISTRATION_FEE,
   getAllSubclasses } from
 '../data/courseCategories';
+import {
+  createEmptyService,
+  getStoredServices,
+  saveServices,
+  SERVICE_ICON_OPTIONS,
+  ServiceItem } from
+'../data/services';
 // Fee Structure State
 const DEFAULT_FEES = {
   // Category A
@@ -166,10 +176,11 @@ export function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCourse, setFilterCourse] = useState('All');
   const [students, setStudents] = useState(contextStudents);
-  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'register'>(
+  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'register' | 'services'>(
     'students'
   );
   const [fees, setFees] = useState(DEFAULT_FEES);
+  const [services, setServices] = useState<ServiceItem[]>(() => getStoredServices());
   const [editingFee, setEditingFee] = useState<string | null>(null);
   const [editValues, setEditValues] = useState({
     theoryOnly: 0,
@@ -177,6 +188,14 @@ export function AdminDashboard() {
     both: 0
   });
   const [feeSaved, setFeeSaved] = useState(false);
+  const [isSavingFee, setIsSavingFee] = useState(false);
+  const [servicesSaved, setServicesSaved] = useState(false);
+  const [isAddingService, setIsAddingService] = useState(false);
+  const [isSavingServices, setIsSavingServices] = useState(false);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
+  const [studentActionLoadingId, setStudentActionLoadingId] = useState<string | null>(null);
+  const [isSavingStudentDetails, setIsSavingStudentDetails] = useState(false);
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   // Student Detail Modal State
@@ -403,19 +422,81 @@ export function AdminDashboard() {
   };
   const saveFee = () => {
     if (editingFee) {
+      setIsSavingFee(true);
       setFees((prev) => ({
         ...prev,
         [editingFee]: editValues
       }));
-      setEditingFee(null);
-      setFeeSaved(true);
-      setTimeout(() => setFeeSaved(false), 3000);
+      window.setTimeout(() => {
+        setEditingFee(null);
+        setFeeSaved(true);
+        setIsSavingFee(false);
+        setTimeout(() => setFeeSaved(false), 3000);
+      }, 450);
     }
   };
   const cancelEditFee = () => {
+    if (isSavingFee) {
+      return;
+    }
     setEditingFee(null);
   };
+  const handleServiceChange = (
+  serviceId: string,
+  field: 'title' | 'description' | 'icon',
+  value: string) =>
+  {
+    setServices((prev) =>
+    prev.map((service) =>
+    service.id === serviceId ?
+    {
+      ...service,
+      [field]: value
+    } :
+    service
+    )
+    );
+    setServicesSaved(false);
+  };
+  const handleAddService = async () => {
+    setIsAddingService(true);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    setServices((prev) => [...prev, createEmptyService()]);
+    setServicesSaved(false);
+    setIsAddingService(false);
+  };
+  const handleDeleteService = async (serviceId: string) => {
+    setDeletingServiceId(serviceId);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    setServices((prev) => prev.filter((service) => service.id !== serviceId));
+    setServicesSaved(false);
+    setDeletingServiceId(null);
+  };
+  const handleSaveServices = async () => {
+    const normalizedServices = services.map((service) => ({
+      ...service,
+      title: service.title.trim(),
+      description: service.description.trim()
+    }));
+    const hasEmptyField = normalizedServices.some(
+      (service) => !service.title || !service.description
+    );
+
+    if (hasEmptyField) {
+      window.alert('Each service needs both a title and description before saving.');
+      return;
+    }
+
+    setIsSavingServices(true);
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    setServices(normalizedServices);
+    saveServices(normalizedServices);
+    setServicesSaved(true);
+    setIsSavingServices(false);
+    setTimeout(() => setServicesSaved(false), 3000);
+  };
   const handleMarkPaid = async (studentId: string, totalFees: number) => {
+    setStudentActionLoadingId(`mark-paid-${studentId}`);
     try {
       await updateStudent(studentId, {
         feesPaid: totalFees
@@ -424,28 +505,34 @@ export function AdminDashboard() {
       console.error('Failed to mark fees as paid', error);
       window.alert('Failed to update student payment in Supabase.');
     }
+    setStudentActionLoadingId(null);
     setOpenActionMenu(null);
   };
   const handleToggleEligibility = (
   studentId: string,
   currentStatus: boolean) =>
   {
+    setStudentActionLoadingId(`toggle-eligibility-${studentId}`);
     void updateStudent(studentId, {
       eligibleForExams: !currentStatus
     }).catch((error) => {
       console.error('Failed to toggle exam eligibility', error);
       window.alert('Failed to update exam eligibility in Supabase.');
+    }).finally(() => {
+      setStudentActionLoadingId(null);
+      setOpenActionMenu(null);
     });
-    setOpenActionMenu(null);
   };
   const handleDeleteStudent = async (studentId: string) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
+      setStudentActionLoadingId(`delete-${studentId}`);
       try {
         await deleteStudent(studentId);
       } catch (error) {
         console.error('Failed to delete student', error);
         window.alert('Failed to delete student from Supabase.');
       }
+      setStudentActionLoadingId(null);
     }
     setOpenActionMenu(null);
   };
@@ -550,6 +637,13 @@ export function AdminDashboard() {
             
             <DollarSign className="h-4 w-4 inline mr-2" />
             Fee Structure
+          </button>
+          <button
+            onClick={() => setActiveTab('services')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'services' ? 'border-[#2E8B57] text-[#2E8B57]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            
+            <Briefcase className="h-4 w-4 inline mr-2" />
+            Services
           </button>
         </div>
 
@@ -734,10 +828,14 @@ export function AdminDashboard() {
                               student.totalFees
                             )
                             }
+                            disabled={studentActionLoadingId !== null}
                             className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
                             
-                                    <Check className="h-4 w-4 mr-2 text-green-500" />
-                                    Mark as Fully Paid
+                                    {studentActionLoadingId === `mark-paid-${student.id}` ?
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin text-green-500" /> :
+                              <Check className="h-4 w-4 mr-2 text-green-500" />
+                              }
+                                    {studentActionLoadingId === `mark-paid-${student.id}` ? 'Updating...' : 'Mark as Fully Paid'}
                                   </button>
                           }
                                 <button
@@ -747,20 +845,28 @@ export function AdminDashboard() {
                               student.eligibleForExams
                             )
                             }
+                            disabled={studentActionLoadingId !== null}
                             className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
                             
-                                  <Award className="h-4 w-4 mr-2 text-blue-500" />
-                                  Toggle Eligibility
+                                  {studentActionLoadingId === `toggle-eligibility-${student.id}` ?
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin text-blue-500" /> :
+                            <Award className="h-4 w-4 mr-2 text-blue-500" />
+                            }
+                                  {studentActionLoadingId === `toggle-eligibility-${student.id}` ? 'Updating...' : 'Toggle Eligibility'}
                                 </button>
                                 <div className="border-t border-gray-100 my-1"></div>
                                 <button
                             onClick={() =>
                             handleDeleteStudent(student.id)
                             }
+                            disabled={studentActionLoadingId !== null}
                             className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center">
                             
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete Student
+                                  {studentActionLoadingId === `delete-${student.id}` ?
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> :
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            }
+                                  {studentActionLoadingId === `delete-${student.id}` ? 'Deleting...' : 'Delete Student'}
                                 </button>
                               </div>
                         }
@@ -904,13 +1010,18 @@ export function AdminDashboard() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                             onClick={saveFee}
+                            disabled={isSavingFee}
                             className="p-1.5 bg-[#2E8B57] text-white rounded-md hover:bg-[#267349] transition-colors"
                             title="Save">
                             
-                                    <Save className="h-4 w-4" />
+                                    {isSavingFee ?
+                              <Loader2 className="h-4 w-4 animate-spin" /> :
+                              <Save className="h-4 w-4" />
+                              }
                                   </button>
                                   <button
                             onClick={cancelEditFee}
+                            disabled={isSavingFee}
                             className="p-1.5 bg-gray-200 text-gray-600 rounded-md hover:bg-gray-300 transition-colors"
                             title="Cancel">
                             
@@ -1000,13 +1111,18 @@ export function AdminDashboard() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                             onClick={saveFee}
+                            disabled={isSavingFee}
                             className="p-1.5 bg-[#1E90FF] text-white rounded-md hover:bg-blue-600 transition-colors"
                             title="Save">
                             
-                                    <Save className="h-4 w-4" />
+                                    {isSavingFee ?
+                              <Loader2 className="h-4 w-4 animate-spin" /> :
+                              <Save className="h-4 w-4" />
+                              }
                                   </button>
                                   <button
                             onClick={cancelEditFee}
+                            disabled={isSavingFee}
                             className="p-1.5 bg-gray-200 text-gray-600 rounded-md hover:bg-gray-300 transition-colors"
                             title="Cancel">
                             
@@ -1090,13 +1206,18 @@ export function AdminDashboard() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                             onClick={saveFee}
+                            disabled={isSavingFee}
                             className="p-1.5 bg-[#D7263D] text-white rounded-md hover:bg-red-600 transition-colors"
                             title="Save">
                             
-                                    <Save className="h-4 w-4" />
+                                    {isSavingFee ?
+                              <Loader2 className="h-4 w-4 animate-spin" /> :
+                              <Save className="h-4 w-4" />
+                              }
                                   </button>
                                   <button
                             onClick={cancelEditFee}
+                            disabled={isSavingFee}
                             className="p-1.5 bg-gray-200 text-gray-600 rounded-md hover:bg-gray-300 transition-colors"
                             title="Cancel">
                             
@@ -1182,13 +1303,18 @@ export function AdminDashboard() {
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                             onClick={saveFee}
+                            disabled={isSavingFee}
                             className="p-1.5 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
                             title="Save">
                             
-                                    <Save className="h-4 w-4" />
+                                    {isSavingFee ?
+                              <Loader2 className="h-4 w-4 animate-spin" /> :
+                              <Save className="h-4 w-4" />
+                              }
                                   </button>
                                   <button
                             onClick={cancelEditFee}
+                            disabled={isSavingFee}
                             className="p-1.5 bg-gray-200 text-gray-600 rounded-md hover:bg-gray-300 transition-colors"
                             title="Cancel">
                             
@@ -1225,6 +1351,150 @@ export function AdminDashboard() {
                 Note: Fee changes will apply to new registrations only. Existing
                 student fees remain unchanged.
               </p>
+            </div>
+          </div>
+        }
+
+        {/* Services Tab */}
+        {activeTab === 'services' &&
+        <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
+            <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">
+                  Services Page Management
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Edit the services shown on the public services page or add new ones.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {servicesSaved &&
+                <div className="flex items-center text-sm text-green-600 bg-green-50 px-4 py-2 rounded-md">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Services updated successfully
+                  </div>
+                }
+                <button
+                  onClick={handleAddService}
+                  disabled={isAddingService || isSavingServices || deletingServiceId !== null}
+                  className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                  
+                  {isAddingService ?
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
+                <PlusCircle className="mr-2 h-4 w-4" />
+                }
+                  {isAddingService ? 'Adding...' : 'Add Service'}
+                </button>
+                <button
+                  onClick={handleSaveServices}
+                  disabled={isAddingService || isSavingServices || deletingServiceId !== null}
+                  className="inline-flex items-center justify-center rounded-md bg-[#2E8B57] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#267349]">
+                  
+                  {isSavingServices ?
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
+                <Save className="mr-2 h-4 w-4" />
+                }
+                  {isSavingServices ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {services.map((service, index) =>
+                <div
+                  key={service.id}
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          Service {index + 1}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Changes appear on `/services` after saving.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => void handleDeleteService(service.id)}
+                        disabled={isAddingService || isSavingServices || deletingServiceId !== null}
+                        className="inline-flex items-center rounded-md px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+                        
+                        {deletingServiceId === service.id ?
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      }
+                        {deletingServiceId === service.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                          Service Title
+                        </label>
+                        <input
+                          type="text"
+                          value={service.title}
+                          onChange={(e) =>
+                          handleServiceChange(
+                            service.id,
+                            'title',
+                            e.target.value
+                          )
+                          }
+                          disabled={isAddingService || isSavingServices || deletingServiceId !== null}
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#2E8B57] focus:ring-2 focus:ring-[#2E8B57]/20"
+                          placeholder="Enter service title" />
+                        
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                          Description
+                        </label>
+                        <textarea
+                          value={service.description}
+                          onChange={(e) =>
+                          handleServiceChange(
+                            service.id,
+                            'description',
+                            e.target.value
+                          )
+                          }
+                          rows={4}
+                          disabled={isAddingService || isSavingServices || deletingServiceId !== null}
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#2E8B57] focus:ring-2 focus:ring-[#2E8B57]/20"
+                          placeholder="Describe the service" />
+                        
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                          Icon
+                        </label>
+                        <select
+                          value={service.icon}
+                          onChange={(e) =>
+                          handleServiceChange(
+                            service.id,
+                            'icon',
+                            e.target.value
+                          )
+                          }
+                          disabled={isAddingService || isSavingServices || deletingServiceId !== null}
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#2E8B57] focus:ring-2 focus:ring-[#2E8B57]/20">
+                          
+                          {SERVICE_ICON_OPTIONS.map((option) =>
+                          <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          )}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         }
@@ -1738,11 +2008,12 @@ export function AdminDashboard() {
                     <button
                   type="submit"
                   disabled={isSubmittingReg}
-                  className="bg-[#2E8B57] text-white px-8 py-2.5 rounded-md text-sm font-medium hover:bg-[#267349] transition-colors disabled:opacity-50">
+                  className="bg-[#2E8B57] text-white px-8 py-2.5 rounded-md text-sm font-medium hover:bg-[#267349] transition-colors disabled:opacity-50 flex items-center">
                   
-                      {isSubmittingReg ?
-                  'Registering...' :
-                  'Complete Registration'}
+                      {isSubmittingReg &&
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  }
+                      {isSubmittingReg ? 'Registering...' : 'Complete Registration'}
                     </button>
                   </div>
                 </form>
@@ -1847,6 +2118,7 @@ export function AdminDashboard() {
               }
                 <button
                 onClick={() => setIsEditing(!isEditing)}
+                disabled={isSavingStudentDetails || isRecordingPayment}
                 className={`flex items-center px-3 py-2 rounded-md transition-colors text-sm font-medium ${isEditing ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-[#2E8B57] text-white hover:bg-[#267349]'}`}>
                 
                   {isEditing ?
@@ -1861,6 +2133,7 @@ export function AdminDashboard() {
                   setSelectedStudent(null);
                   setIsEditing(false);
                 }}
+                disabled={isSavingStudentDetails || isRecordingPayment}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">
                 
                   <X className="h-6 w-6" />
@@ -1879,6 +2152,7 @@ export function AdminDashboard() {
                       <input
                     type="text"
                     value={editStudentData.name || ''}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -1895,6 +2169,7 @@ export function AdminDashboard() {
                       <input
                     type="text"
                     value={editStudentData.idNumber || ''}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -1911,6 +2186,7 @@ export function AdminDashboard() {
                       <input
                     type="email"
                     value={editStudentData.email || ''}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -1927,6 +2203,7 @@ export function AdminDashboard() {
                       <input
                     type="tel"
                     value={editStudentData.phone || ''}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -1943,6 +2220,7 @@ export function AdminDashboard() {
                       <input
                     type="text"
                     value={editStudentData.course || ''}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -1959,6 +2237,7 @@ export function AdminDashboard() {
                       <input
                     type="number"
                     value={editStudentData.feesPaid || 0}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -1975,6 +2254,7 @@ export function AdminDashboard() {
                       <input
                     type="number"
                     value={editStudentData.totalFees || 0}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -1991,6 +2271,7 @@ export function AdminDashboard() {
                       <input
                     type="number"
                     value={editStudentData.pendingDays || 0}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -2006,6 +2287,7 @@ export function AdminDashboard() {
                       </label>
                       <select
                     value={editStudentData.status || 'Active'}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -2024,6 +2306,7 @@ export function AdminDashboard() {
                     type="checkbox"
                     id="eligible"
                     checked={editStudentData.eligibleForExams || false}
+                    disabled={isSavingStudentDetails}
                     onChange={(e) =>
                     setEditStudentData({
                       ...editStudentData,
@@ -2043,12 +2326,14 @@ export function AdminDashboard() {
                   <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                     <button
                   onClick={() => setIsEditing(false)}
+                  disabled={isSavingStudentDetails}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium">
                   
                       Cancel
                     </button>
                     <button
                   onClick={() => {
+                    setIsSavingStudentDetails(true);
                     void updateStudent(selectedStudent.id, editStudentData).
                     then(() => {
                       setSelectedStudent({
@@ -2060,11 +2345,19 @@ export function AdminDashboard() {
                     catch((error) => {
                       console.error('Failed to save student changes', error);
                       window.alert('Failed to save student changes to Supabase.');
+                    }).
+                    finally(() => {
+                      setIsSavingStudentDetails(false);
                     });
                   }}
-                  className="px-4 py-2 bg-[#2E8B57] text-white rounded-md hover:bg-[#267349] font-medium flex items-center">
+                  disabled={isSavingStudentDetails}
+                  className="px-4 py-2 bg-[#2E8B57] text-white rounded-md hover:bg-[#267349] font-medium flex items-center disabled:opacity-60">
                   
-                      <Save className="h-4 w-4 mr-2" /> Save Changes
+                      {isSavingStudentDetails ?
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> :
+                  <Save className="h-4 w-4 mr-2" />
+                  }
+                      {isSavingStudentDetails ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </div> :
@@ -2213,6 +2506,7 @@ export function AdminDashboard() {
                             <input
                         type="number"
                         value={additionalPayment}
+                        disabled={isRecordingPayment}
                         onChange={(e) =>
                         setAdditionalPayment(
                           e.target.value ? Number(e.target.value) : ''
@@ -2233,6 +2527,7 @@ export function AdminDashboard() {
                         typeof additionalPayment === 'number' &&
                         additionalPayment > 0)
                         {
+                          setIsRecordingPayment(true);
                           const newPaid =
                           selectedStudent.feesPaid + additionalPayment;
                           void updateStudent(selectedStudent.id, {
@@ -2252,19 +2547,26 @@ export function AdminDashboard() {
                           catch((error) => {
                             console.error('Failed to record payment', error);
                             window.alert('Failed to record payment in Supabase.');
+                          }).
+                          finally(() => {
+                            setIsRecordingPayment(false);
                           });
                         }
                       }}
                       disabled={
+                      isRecordingPayment ||
                       !additionalPayment ||
                       additionalPayment <= 0 ||
                       additionalPayment >
                       selectedStudent.totalFees -
                       selectedStudent.feesPaid
                       }
-                      className="bg-[#2E8B57] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#267349] transition-colors disabled:opacity-50">
+                      className="bg-[#2E8B57] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#267349] transition-colors disabled:opacity-50 flex items-center">
                       
-                            Record Payment
+                            {isRecordingPayment &&
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        }
+                            {isRecordingPayment ? 'Recording...' : 'Record Payment'}
                           </button>
                         </div>
                       </div>

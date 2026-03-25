@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
 import {
   Printer,
@@ -11,56 +11,34 @@ import {
   Award,
   ArrowRight } from
 'lucide-react';
+import { DEFAULT_SERVICES, getStoredServices, ServiceIconKey, ServiceItem } from '../data/services';
+
+const serviceIcons: Record<ServiceIconKey, React.ReactNode> = {
+  printer: <Printer size={24} />,
+  'pen-tool': <PenTool size={24} />,
+  globe: <Globe size={24} />,
+  settings: <Settings size={24} />,
+  'file-text': <FileText size={24} />,
+  'help-circle': <HelpCircle size={24} />,
+  repeat: <Repeat size={24} />,
+  award: <Award size={24} />
+};
+
 export function Services() {
-  const services = [
-  {
-    title: 'Printing Services',
-    description:
-    'Regular, large format, and plotter printing for documents, posters, banners, and more.',
-    icon: <Printer size={24} />
-  },
-  {
-    title: 'T-shirt & Branding',
-    description:
-    'Custom t-shirt printing, branding materials, and promotional items for businesses and events.',
-    icon: <PenTool size={24} />
-  },
-  {
-    title: 'Web Hosting & Design',
-    description:
-    'Website design, hosting, and maintenance services for businesses and individuals.',
-    icon: <Globe size={24} />
-  },
-  {
-    title: 'Software Installation',
-    description:
-    'Professional software installation, updates, and troubleshooting for your devices.',
-    icon: <Settings size={24} />
-  },
-  {
-    title: 'KRA Services',
-    description:
-    'Assistance with KRA PIN registration, returns filing, and tax compliance matters.',
-    icon: <FileText size={24} />
-  },
-  {
-    title: 'HELB Applications',
-    description:
-    'Guidance and support with HELB loan applications and management.',
-    icon: <HelpCircle size={24} />
-  },
-  {
-    title: 'Driving Licence Renewal',
-    description:
-    'Simplified process for renewing your driving licence without the hassle.',
-    icon: <Repeat size={24} />
-  },
-  {
-    title: 'eCitizen Services',
-    description:
-    'Assistance with eCitizen registration and various government services applications.',
-    icon: <Award size={24} />
-  }];
+  const [services, setServices] = useState<ServiceItem[]>(DEFAULT_SERVICES);
+
+  useEffect(() => {
+    setServices(getStoredServices());
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'lashawnServices') {
+        setServices(getStoredServices());
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -102,7 +80,7 @@ export function Services() {
             <div className="grid grid-cols-2 gap-6">
               <div className="bg-white p-6 rounded-xl border border-gray-200 text-center">
                 <p className="font-heading text-3xl font-extrabold text-brand-red mb-1">
-                  8+
+                  {services.length}+
                 </p>
                 <p className="font-accent text-xs uppercase tracking-widest text-gray-500">
                   Core Services
@@ -126,15 +104,15 @@ export function Services() {
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {services.map((service, index) =>
+              {services.map((service) =>
               <div
-                key={index}
+                key={service.id}
                 className="flex bg-brand-cream border border-gray-100 rounded-r-xl overflow-hidden group">
                 
                   <div className="w-2 bg-brand-green group-hover:bg-brand-red transition-colors"></div>
                   <div className="p-8 flex items-start gap-6">
                     <div className="flex-shrink-0 h-14 w-14 rounded-full bg-white text-brand-charcoal flex items-center justify-center shadow-sm group-hover:text-brand-red transition-colors">
-                      {service.icon}
+                      {serviceIcons[service.icon]}
                     </div>
                     <div>
                       <h3 className="font-heading text-xl font-bold text-brand-charcoal mb-3">
