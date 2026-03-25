@@ -118,7 +118,7 @@ export function Contact() {
                           href="mailto:lashawnlimited@gmail.com"
                           className="text-gray-600 hover:text-[#2E8B57]">
                           
-                          lashawnlimited@gmail.com
+                          lashawndrivingschoollimited@lashawnacademy.com
                         </a>
                       </p>
                     </div>

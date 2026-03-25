@@ -172,7 +172,7 @@ export function Footer() {
                   href="mailto:lashawnlimited@gmail.com"
                   className="font-body text-sm text-gray-400 hover:text-white transition-colors">
                   
-                  lashawnlimited@gmail.com
+                  lashawndrivingschoollimited@lashawnacademy.com
                 </a>
               </div>
             </div>
