@@ -1,12 +1,15 @@
 import React from 'react';
 import { Button } from '../components/ui/Button';
 import { Phone, HelpCircle } from 'lucide-react';
-import { DRIVING_CATEGORIES, REGISTRATION_FEE } from '../data/courseCategories';
+import { getDrivingCategories, REGISTRATION_FEE } from '../data/courseCategories';
+import { useFeeStructure } from '../data/feeStructure';
 export function Fees() {
+  const fees = useFeeStructure();
+  const drivingCategories = getDrivingCategories(fees);
   const computerFees = [
   {
     course: 'Microsoft Office Suite',
-    basic: 'KSh 8,000',
+    basic: `KSh ${fees['Microsoft Office Suite'].both.toLocaleString()}`,
     advanced: 'KSh 12,000',
     duration: '4 weeks',
     includes: [
@@ -20,7 +23,7 @@ export function Fees() {
   },
   {
     course: 'Basic IT & Networking',
-    basic: 'KSh 10,000',
+    basic: `KSh ${fees['Basic IT & Networking'].both.toLocaleString()}`,
     advanced: 'KSh 15,000',
     duration: '6 weeks',
     includes: [
@@ -47,7 +50,7 @@ export function Fees() {
   const specialCourses = [
   {
     course: 'First Aid Training',
-    fee: 'KSh 5,000',
+    fee: `KSh ${fees['First Aid Training'].both.toLocaleString()}`,
     duration: '2 weeks',
     includes: [
     'Emergency response',
@@ -58,7 +61,7 @@ export function Fees() {
   },
   {
     course: 'Basic Mechanics',
-    fee: 'KSh 7,000',
+    fee: `KSh ${fees['Basic Mechanics'].both.toLocaleString()}`,
     duration: '3 weeks',
     includes: [
     'Vehicle maintenance',
@@ -71,19 +74,19 @@ export function Fees() {
   const additionalServices = [
   {
     service: 'KRA PIN Registration',
-    fee: 'KSh 500'
+    fee: `KSh ${fees['KRA PIN Registration'].both.toLocaleString()}`
   },
   {
     service: 'HELB Application Assistance',
-    fee: 'KSh 800'
+    fee: `KSh ${fees['HELB Application Assistance'].both.toLocaleString()}`
   },
   {
     service: 'eCitizen Service Support',
-    fee: 'KSh 500'
+    fee: `KSh ${fees['eCitizen Service Support'].both.toLocaleString()}`
   },
   {
     service: 'Driving License Renewal',
-    fee: 'KSh 1,000'
+    fee: `KSh ${fees['Driving License Renewal'].both.toLocaleString()}`
   },
   {
     service: 'Business Card Printing (100 pcs)',
@@ -164,7 +167,7 @@ export function Fees() {
             </div>
 
             <div className="space-y-8">
-              {DRIVING_CATEGORIES.map((category) =>
+              {drivingCategories.map((category) =>
               <div
                 key={category.code}
                 className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">

@@ -7,8 +7,11 @@ import {
   Users,
   ArrowRight } from
 'lucide-react';
-import { DRIVING_CATEGORIES } from '../data/courseCategories';
+import { getDrivingCategories } from '../data/courseCategories';
+import { useFeeStructure } from '../data/feeStructure';
 export function DrivingCourses() {
+  const fees = useFeeStructure();
+  const drivingCategories = getDrivingCategories(fees);
   const benefits = [
   {
     icon: <Shield size={24} />,
@@ -145,7 +148,7 @@ export function DrivingCourses() {
           </div>
 
           <div className="space-y-12 max-w-6xl mx-auto">
-            {DRIVING_CATEGORIES.map((category) =>
+            {drivingCategories.map((category) =>
             <div
               key={category.code}
               className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { isAdminAuthenticated, setAdminAuthenticated } from '../utils/adminAuth';
 // import { supabase } from '../contexts/supabaseClient';
 export function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -15,6 +16,13 @@ export function AdminLogin() {
   const [registerError, setRegisterError] = useState('');
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAdminAuthenticated()) {
+      navigate('/admin/dashboard', { replace: true });
+    }
+  }, [navigate]);
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setRegisterError('');
@@ -65,8 +73,8 @@ export function AdminLogin() {
         setIsLoading(false);
         return;
       }
-      localStorage.setItem('adminAuth', 'true');
-      navigate('/admin/dashboard');
+      setAdminAuthenticated();
+      navigate('/admin/dashboard', { replace: true });
     } catch (err) {
       setError('Server error. Please try again.');
     }

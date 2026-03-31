@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { Home } from './pages/Home';
 import { DrivingCourses } from './pages/DrivingCourses';
@@ -16,6 +16,16 @@ import { PageTransition } from './components/layout/PageTransition';
 import { AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { StudentProvider } from './contexts/StudentContext';
+import { isAdminAuthenticated } from './utils/adminAuth';
+
+function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
+  if (!isAdminAuthenticated()) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
   return (
@@ -104,9 +114,11 @@ function AnimatedRoutes() {
         <Route
           path="/admin/dashboard"
           element={
-          <PageTransition>
-              <AdminDashboard />
-            </PageTransition>
+          <ProtectedAdminRoute>
+              <PageTransition>
+                <AdminDashboard />
+              </PageTransition>
+            </ProtectedAdminRoute>
           } />
         
       </Routes>

@@ -1,5 +1,7 @@
 // Shared driving course categories, subclasses, and fee structure
 
+import { getStoredFees, type FeeStructure } from './feeStructure';
+
 export interface SubClass {
   code: string;
   name: string;
@@ -320,12 +322,22 @@ export const DRIVING_CATEGORIES: Category[] = [
 }];
 
 
+export function getDrivingCategories(fees: FeeStructure = getStoredFees()): Category[] {
+  return DRIVING_CATEGORIES.map((category) => ({
+    ...category,
+    subclasses: category.subclasses.map((subclass) => ({
+      ...subclass,
+      fee: fees[subclass.code]?.both ?? subclass.fee
+    }))
+  }));
+}
+
 // Helper to get all subclasses as a flat list
 export function getAllSubclasses(): (SubClass & {
   categoryCode: string;
   categoryName: string;
 })[] {
-  return DRIVING_CATEGORIES.flatMap((cat) =>
+  return getDrivingCategories().flatMap((cat) =>
   cat.subclasses.map((sub) => ({
     ...sub,
     categoryCode: cat.code,
@@ -336,7 +348,7 @@ export function getAllSubclasses(): (SubClass & {
 
 // Helper to get fee by subclass code
 export function getFeeByCode(code: string): number {
-  for (const cat of DRIVING_CATEGORIES) {
+  for (const cat of getDrivingCategories()) {
     const sub = cat.subclasses.find((s) => s.code === code);
     if (sub) return sub.fee;
   }
@@ -345,7 +357,7 @@ export function getFeeByCode(code: string): number {
 
 // Helper to get subclass label
 export function getSubclassLabel(code: string): string {
-  for (const cat of DRIVING_CATEGORIES) {
+  for (const cat of getDrivingCategories()) {
     const sub = cat.subclasses.find((s) => s.code === code);
     if (sub) return `${sub.code} — ${sub.name}`;
   }

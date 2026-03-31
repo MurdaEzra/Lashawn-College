@@ -40,6 +40,7 @@ import {
   SERVICE_ICON_OPTIONS,
   ServiceItem } from
 '../data/services';
+import { getStoredFees, saveFees, type FeeStructure } from '../data/feeStructure';
 import { supabase } from '../contexts/supabaseClient';
 
 interface ServiceInvoice {
@@ -138,130 +139,6 @@ const mapServiceInvoiceRow = (row: ServiceInvoiceRow): ServiceInvoice => ({
   notes: row.notes || '',
   dueDate: row.due_date || ''
 });
-// Fee Structure State
-const DEFAULT_FEES = {
-  // Category A
-  A1: {
-    theoryOnly: 4000,
-    practical: 7000,
-    both: 10000
-  },
-  A2: {
-    theoryOnly: 4800,
-    practical: 8400,
-    both: 12000
-  },
-  A3: {
-    theoryOnly: 4000,
-    practical: 7000,
-    both: 10000
-  },
-  // Category B
-  B1: {
-    theoryOnly: 6400,
-    practical: 11200,
-    both: 16000
-  },
-  B2: {
-    theoryOnly: 6400,
-    practical: 11200,
-    both: 16000
-  },
-  B3: {
-    theoryOnly: 8000,
-    practical: 14000,
-    both: 20000
-  },
-  // Category C
-  C: {
-    theoryOnly: 7600,
-    practical: 13300,
-    both: 19000
-  },
-  C1: {
-    theoryOnly: 8800,
-    practical: 15400,
-    both: 22000
-  },
-  CE: {
-    theoryOnly: 10400,
-    practical: 18200,
-    both: 26000
-  },
-  // Category D
-  D1: {
-    theoryOnly: 9600,
-    practical: 16800,
-    both: 24000
-  },
-  D2: {
-    theoryOnly: 11200,
-    practical: 19600,
-    both: 28000
-  },
-  D3: {
-    theoryOnly: 12800,
-    practical: 22400,
-    both: 32000
-  },
-  // Category E, F, G
-  E: {
-    theoryOnly: 14000,
-    practical: 24500,
-    both: 35000
-  },
-  F: {
-    theoryOnly: 7200,
-    practical: 12600,
-    both: 18000
-  },
-  G: {
-    theoryOnly: 6000,
-    practical: 10500,
-    both: 15000
-  },
-  // Other Courses
-  'Microsoft Office Suite': {
-    theoryOnly: 0,
-    practical: 0,
-    both: 8000
-  },
-  'Basic IT & Networking': {
-    theoryOnly: 0,
-    practical: 0,
-    both: 10000
-  },
-  'First Aid Training': {
-    theoryOnly: 0,
-    practical: 0,
-    both: 5000
-  },
-  'Basic Mechanics': {
-    theoryOnly: 0,
-    practical: 0,
-    both: 7000
-  },
-  'KRA PIN Registration': {
-    theoryOnly: 0,
-    practical: 0,
-    both: 500
-  },
-  'HELB Application Assistance': {
-    theoryOnly: 0,
-    practical: 0,
-    both: 800
-  },
-  'eCitizen Service Support': {
-    theoryOnly: 0,
-    practical: 0,
-    both: 500
-  },
-  'Driving License Renewal': {
-    theoryOnly: 0,
-    practical: 0,
-    both: 1000
-  }
-};
 export function AdminDashboard() {
   const {
     students: contextStudents,
@@ -281,7 +158,7 @@ export function AdminDashboard() {
     'students'
   );
   const [isTabLoading, setIsTabLoading] = useState(false);
-  const [fees, setFees] = useState(DEFAULT_FEES);
+  const [fees, setFees] = useState<FeeStructure>(() => getStoredFees());
   const [services, setServices] = useState<ServiceItem[]>(() => getStoredServices());
   const [editingFee, setEditingFee] = useState<string | null>(null);
   const [editValues, setEditValues] = useState({
@@ -772,10 +649,12 @@ export function AdminDashboard() {
   const saveFee = () => {
     if (editingFee) {
       setIsSavingFee(true);
-      setFees((prev) => ({
-        ...prev,
+      const nextFees = {
+        ...fees,
         [editingFee]: editValues
-      }));
+      };
+      setFees(nextFees);
+      saveFees(nextFees);
       window.setTimeout(() => {
         setEditingFee(null);
         setFeeSaved(true);
@@ -1705,7 +1584,7 @@ export function AdminDashboard() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {Object.entries(fees).
-                  filter(([key]) => /^[A-G]\d?$/.test(key) || key === 'CE').
+                  filter(([key]) => /^(?:A\d?|B\d?|C(?:E|1)?|D\d|E|F|G\d{1,2})$/.test(key)).
                   map(([category, values], index) =>
                   <tr
                     key={category}
