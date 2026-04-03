@@ -166,7 +166,15 @@ app.post('/admin-login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  return res.json({ success: true });
+  return res.json({
+    success: true,
+    admin: {
+      id: data.id,
+      name: data.name || '',
+      email: data.email || '',
+      role: data.role || 'admin'
+    }
+  });
 });
 
 const port = process.env.PORT || 3001;

@@ -73,7 +73,12 @@ export function AdminLogin() {
         setIsLoading(false);
         return;
       }
-      setAdminAuthenticated();
+      setAdminAuthenticated({
+        id: result.admin?.id || '',
+        name: result.admin?.name || '',
+        email: result.admin?.email || email,
+        role: result.admin?.role || 'admin'
+      });
       navigate('/admin/dashboard', { replace: true });
     } catch (err) {
       setError('Server error. Please try again.');

@@ -5,6 +5,7 @@ import React, {
 } from 'react';
 import { supabase } from './supabaseClient';
 import { StudentContext } from './StudentContextContext';
+import { getAdminAuthenticated } from '../utils/adminAuth';
 
 type ContactType = 'next_of_kin' | 'sponsor';
 
@@ -63,6 +64,7 @@ interface StudentRow {
   pending_days: number | null;
   eligible_for_exams: boolean | null;
   enrollment_date: string | null;
+  admitted_by: string | null;
   created_at: string | null;
   student_course_enrollments: EnrollmentRow[] | null;
   student_contacts: StudentContactRow[] | null;
@@ -217,7 +219,14 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError('');
 
-    const { data, error: fetchError } = await supabase
+    const admin = getAdminAuthenticated() || {
+      id: '',
+      name: '',
+      email: '',
+      role: 'admin'
+    };
+
+    let query = supabase
       .from('students')
       .select(
         `
@@ -239,6 +248,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
           pending_days,
           eligible_for_exams,
           enrollment_date,
+          admitted_by,
           created_at,
           student_course_enrollments (
             id,
@@ -276,6 +286,15 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
         `
       )
       .order('created_at', { ascending: false });
+
+    if (admin.role !== 'super_admin') {
+      query = query.eq('admitted_by', admin.id);
+    }
+
+    const { data, error: fetchError } = await query;
+
+    console.log('Logged admin:', admin);
+    console.log('Students returned:', data);
 
     if (fetchError) {
       setError(fetchError.message);
@@ -316,6 +335,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
         pending_days: student.pendingDays ?? 30,
         eligible_for_exams:
           student.eligibleForExams ?? student.amountPaid >= student.totalFee,
+        admitted_by: getAdminAuthenticated()?.id?.trim() || null,
         enrollment_date:
           student.enrollmentDate || new Date().toISOString().split('T')[0]
       };

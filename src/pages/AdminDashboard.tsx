@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   Search,
@@ -42,6 +43,7 @@ import {
 '../data/services';
 import { getStoredFees, saveFees, type FeeStructure } from '../data/feeStructure';
 import { supabase } from '../contexts/supabaseClient';
+import { clearAdminAuthenticated, getAdminAuthenticated } from '../utils/adminAuth';
 
 interface ServiceInvoice {
   id: string;
@@ -84,6 +86,13 @@ interface ServiceInvoiceRow {
   notes: string | null;
 }
 
+interface ComputerPackageOption {
+  id: string;
+  title: string;
+  duration: string;
+  fee: number;
+}
+
 const toCurrencyNumber = (value: number | string | null | undefined) => {
   if (typeof value === 'number') {
     return value;
@@ -119,6 +128,57 @@ const getElapsedDays = (dateValue: string, todayValue: Date) => {
   return Math.max(Math.floor((today.getTime() - startDate.getTime()) / 86400000), 0);
 };
 
+const getRecordDateValue = (dateValue: string | null | undefined) => {
+  if (!dateValue) {
+    return '';
+  }
+
+  const normalized = new Date(dateValue);
+  if (Number.isNaN(normalized.getTime())) {
+    return '';
+  }
+
+  return normalized.toISOString().split('T')[0];
+};
+
+const formatRecordDate = (dateValue: string | null | undefined) => {
+  if (!dateValue) {
+    return 'N/A';
+  }
+
+  const normalized = new Date(dateValue);
+  if (Number.isNaN(normalized.getTime())) {
+    return 'N/A';
+  }
+
+  return normalized.toLocaleDateString('en-KE', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+const getComputerPackageOptions = (fees: FeeStructure): ComputerPackageOption[] => [
+  {
+    id: 'Microsoft Office Suite',
+    title: 'Microsoft Office Suite',
+    duration: '4 weeks',
+    fee: fees['Microsoft Office Suite']?.both ?? 8000
+  },
+  {
+    id: 'Basic IT & Networking',
+    title: 'Basic IT & Networking',
+    duration: '6 weeks',
+    fee: fees['Basic IT & Networking']?.both ?? 10000
+  },
+  {
+    id: 'Graphic Design Fundamentals',
+    title: 'Graphic Design Fundamentals',
+    duration: '8 weeks',
+    fee: 12000
+  }
+];
+
 const mapServiceInvoiceRow = (row: ServiceInvoiceRow): ServiceInvoice => ({
   id: row.invoice_number,
   invoiceId: row.id,
@@ -140,21 +200,26 @@ const mapServiceInvoiceRow = (row: ServiceInvoiceRow): ServiceInvoice => ({
   dueDate: row.due_date || ''
 });
 export function AdminDashboard() {
+  const navigate = useNavigate();
   const {
     students: contextStudents,
     loading: studentsLoading,
     error: studentError,
+    refreshStudents,
     updateStudent,
     deleteStudent,
     addStudent
   } = useStudentContext();
+  const adminSession = getAdminAuthenticated();
+  const [adminName, setAdminName] = useState(adminSession?.name?.trim() || 'Admin');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCourse, setFilterCourse] = useState('All');
+  const [selectedRevenueDate, setSelectedRevenueDate] = useState('');
   const [dashboardRecords, setDashboardRecords] = useState<DashboardRecord[]>([]);
   const [serviceInvoices, setServiceInvoices] = useState<ServiceInvoice[]>([]);
   const [serviceInvoiceError, setServiceInvoiceError] = useState('');
   const [serviceInvoiceLoading, setServiceInvoiceLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'register' | 'services' | 'invoice'>(
+  const [activeTab, setActiveTab] = useState<'students' | 'fees' | 'register' | 'computer-register' | 'services' | 'invoice'>(
     'students'
   );
   const [isTabLoading, setIsTabLoading] = useState(false);
@@ -203,12 +268,33 @@ export function AdminDashboard() {
     dueDate: '',
     notes: ''
   });
+  const handleLogout = () => {
+    clearAdminAuthenticated();
+    navigate('/admin/login', { replace: true });
+  };
   // Registration Form State
   const [regStep, setRegStep] = useState(1);
   const [isSubmittingReg, setIsSubmittingReg] = useState(false);
   const [isStepLoading, setIsStepLoading] = useState(false);
   const [newRegNumber, setNewRegNumber] = useState('');
   const [amountPaid, setAmountPaid] = useState<number | ''>('');
+  const [computerRegNumber, setComputerRegNumber] = useState('');
+  const [computerAmountPaid, setComputerAmountPaid] = useState<number | ''>('');
+  const [isSubmittingComputerReg, setIsSubmittingComputerReg] = useState(false);
+  const [computerRegFormData, setComputerRegFormData] = useState({
+    branch: '',
+    packageName: '',
+    studentName: '',
+    idNumber: '',
+    gender: '',
+    dob: '',
+    nationality: '',
+    county: '',
+    email: '',
+    phone: '',
+    schedule: '',
+    termsAccepted: false
+  });
   const [regFormData, setRegFormData] = useState({
     applicationType: '',
     branch: '',
@@ -242,6 +328,10 @@ export function AdminDashboard() {
     termsAccepted: false,
     privacyAccepted: false
   });
+  const computerPackages = getComputerPackageOptions(fees);
+  const selectedComputerPackage = computerPackages.find(
+    (item) => item.id === computerRegFormData.packageName
+  );
   const handleRegChange = (
   e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
   {
@@ -258,8 +348,18 @@ export function AdminDashboard() {
       {})
     }));
   };
+  const handleComputerRegChange = (
+  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    setComputerRegFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
   const handleTabChange = async (
-  nextTab: 'students' | 'fees' | 'register' | 'services' | 'invoice') =>
+  nextTab: 'students' | 'fees' | 'register' | 'computer-register' | 'services' | 'invoice') =>
   {
     if (nextTab === activeTab || isTabLoading) {
       return;
@@ -346,6 +446,67 @@ export function AdminDashboard() {
       setIsSubmittingReg(false);
     }
   };
+  const handleComputerRegistrationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedComputerPackage) {
+      window.alert('Please select a computer package.');
+      return;
+    }
+
+    setIsSubmittingComputerReg(true);
+    try {
+      const paid = typeof computerAmountPaid === 'number' ? computerAmountPaid : 0;
+      const createdStudent = await addStudent({
+        applicationType: 'Computer Package',
+        branch: computerRegFormData.branch,
+        drivingCategory: '',
+        subclassCode: '',
+        drivingClass: 'Computer Package',
+        studentName: computerRegFormData.studentName,
+        idNumber: computerRegFormData.idNumber,
+        gender: computerRegFormData.gender,
+        dob: computerRegFormData.dob,
+        nationality: computerRegFormData.nationality,
+        county: computerRegFormData.county,
+        email: computerRegFormData.email,
+        phone: computerRegFormData.phone,
+        previousExperience: '',
+        healthCondition: '',
+        kinName: '',
+        kinRelationship: '',
+        kinPhone: '',
+        kinEmail: '',
+        kinCity: '',
+        isSelfSponsored: 'yes',
+        sponsorName: '',
+        sponsorRelationship: '',
+        sponsorPhone: '',
+        sponsorEmail: '',
+        sponsorCity: '',
+        schedule: computerRegFormData.schedule,
+        source: 'Admin Computer Registration',
+        salesPerson: '',
+        termsAccepted: computerRegFormData.termsAccepted,
+        privacyAccepted: true,
+        courseName: selectedComputerPackage.title,
+        courseFee: selectedComputerPackage.fee,
+        registrationFee: 0,
+        totalFee: selectedComputerPackage.fee,
+        amountPaid: paid,
+        pendingDays: 30,
+        eligibleForExams: paid >= selectedComputerPackage.fee,
+        status: 'Active',
+        enrollmentDate: new Date().toISOString().split('T')[0]
+      });
+      setComputerRegNumber(createdStudent.id);
+    } catch (error) {
+      console.error('Failed to save computer student registration', error);
+      window.alert('Failed to save computer student registration to Supabase.');
+    } finally {
+      setIsSubmittingComputerReg(false);
+    }
+  };
   const resetRegistration = () => {
     setRegStep(1);
     setIsStepLoading(false);
@@ -383,6 +544,24 @@ export function AdminDashboard() {
       salesPerson: '',
       termsAccepted: false,
       privacyAccepted: false
+    });
+  };
+  const resetComputerRegistration = () => {
+    setComputerRegNumber('');
+    setComputerAmountPaid('');
+    setComputerRegFormData({
+      branch: '',
+      packageName: '',
+      studentName: '',
+      idNumber: '',
+      gender: '',
+      dob: '',
+      nationality: '',
+      county: '',
+      email: '',
+      phone: '',
+      schedule: '',
+      termsAccepted: false
     });
   };
   const copyRegNumber = () => {
@@ -445,8 +624,11 @@ export function AdminDashboard() {
   const fetchServiceInvoices = async () => {
     setServiceInvoiceLoading(true);
     setServiceInvoiceError('');
+    const sessionAdmin = getAdminAuthenticated();
+    const sessionAdminId = sessionAdmin?.id?.trim();
+    const sessionAdminRole = sessionAdmin?.role?.trim() || 'admin';
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('service_invoices')
       .select(
         `
@@ -468,6 +650,12 @@ export function AdminDashboard() {
         `
       )
       .order('created_at', { ascending: false });
+
+    if (sessionAdminRole !== 'super_admin' && sessionAdminId) {
+      query = query.eq('admitted_by', sessionAdminId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       setServiceInvoiceError(error.message);
@@ -520,6 +708,7 @@ export function AdminDashboard() {
           amount_paid: amountPaidValue,
           balance,
           status,
+          admitted_by: getAdminAuthenticated()?.id?.trim() || null,
           invoice_date: new Date().toISOString().split('T')[0],
           due_date: invoiceFormData.dueDate || null,
           notes: invoiceFormData.notes || null
@@ -572,7 +761,29 @@ export function AdminDashboard() {
     (c) => c.code === regFormData.drivingCategory
   );
   useEffect(() => {
+    void refreshStudents();
     void fetchServiceInvoices();
+  }, [refreshStudents]);
+  useEffect(() => {
+    const loadAdminProfile = async () => {
+      const sessionAdminId = getAdminAuthenticated()?.id?.trim();
+
+      if (!sessionAdminId) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('admins')
+        .select('name')
+        .eq('id', sessionAdminId)
+        .single();
+
+      if (!error && data?.name) {
+        setAdminName(data.name);
+      }
+    };
+
+    void loadAdminProfile();
   }, []);
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -611,8 +822,13 @@ export function AdminDashboard() {
         return record.recordType === 'student' && record.course.includes(filterCourse);
       });
     }
+    if (selectedRevenueDate) {
+      filtered = filtered.filter(
+        (record) => getRecordDateValue(record.enrollmentDate) === selectedRevenueDate
+      );
+    }
     setDashboardRecords(filtered);
-  }, [searchTerm, filterCourse, contextStudents, serviceInvoices]);
+  }, [searchTerm, filterCourse, selectedRevenueDate, contextStudents, serviceInvoices]);
   // Close action menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -626,9 +842,21 @@ export function AdminDashboard() {
   const totalStudents = contextStudents.length;
   const totalServiceClients = serviceInvoices.length;
   const totalRecords = totalStudents + totalServiceClients;
-  const totalRevenue =
-  contextStudents.reduce((sum, s) => sum + s.feesPaid, 0) +
-  serviceInvoices.reduce((sum, invoice) => sum + invoice.feesPaid, 0);
+  const totalRevenue = [
+  ...contextStudents.map((student) => ({
+    amount: student.feesPaid,
+    date: student.enrollmentDate
+  })),
+  ...serviceInvoices.map((invoice) => ({
+    amount: invoice.feesPaid,
+    date: invoice.enrollmentDate
+  }))].
+  filter((entry) =>
+  selectedRevenueDate ?
+  getRecordDateValue(entry.date) === selectedRevenueDate :
+  true
+  ).
+  reduce((sum, entry) => sum + entry.amount, 0);
   const pendingFees =
   contextStudents.reduce(
     (sum, s) => sum + (s.totalFees - s.feesPaid),
@@ -835,10 +1063,16 @@ export function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-xl font-bold">Lashawn Admin Portal</h1>
-              <p className="text-xs text-gray-400">Student & Service Management System</p>
+              <p className="text-xs text-gray-400">
+                Welcome back, {adminName}
+              </p>
             </div>
           </div>
-          
+          <button
+            onClick={handleLogout}
+            className="rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20">
+            Log Out
+          </button>
         </div>
       </div>
 
@@ -905,7 +1139,9 @@ export function AdminDashboard() {
               <Clock className="h-6 w-6 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total Revenue</p>
+              <p className="text-sm text-gray-500 font-medium">
+                {selectedRevenueDate ? `Revenue for ${formatRecordDate(selectedRevenueDate)}` : 'Total Revenue'}
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 KSh {totalRevenue.toLocaleString()}
               </p>
@@ -941,6 +1177,14 @@ export function AdminDashboard() {
             
             <UserPlus className="h-4 w-4 inline mr-2" />
             Register Student
+          </button>
+          <button
+            onClick={() => void handleTabChange('computer-register')}
+            disabled={isTabLoading}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'computer-register' ? 'border-[#1E90FF] text-[#1E90FF]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+
+            <GraduationCap className="h-4 w-4 inline mr-2" />
+            Computer Packages
           </button>
           <button
             onClick={() => void handleTabChange('invoice')}
@@ -1021,6 +1265,19 @@ export function AdminDashboard() {
                     <option value="Basic IT">IT Courses</option>
                   </select>
                 </div>
+                <input
+                  type="date"
+                  value={selectedRevenueDate}
+                  onChange={(e) => setSelectedRevenueDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-[#2E8B57] focus:border-[#2E8B57] outline-none bg-white w-full sm:w-auto"
+                  aria-label="Filter records and revenue by date" />
+                {selectedRevenueDate &&
+                <button
+                  onClick={() => setSelectedRevenueDate('')}
+                  className="flex items-center justify-center bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors border border-gray-300">
+                    Clear Date
+                  </button>
+                }
                 <button
                 onClick={() => {
                   triggerPrint('export', 'student_service_records_report');
@@ -1039,6 +1296,7 @@ export function AdminDashboard() {
                     <th className="px-6 py-4 font-semibold">Reference & Name</th>
                     <th className="px-6 py-4 font-semibold">Type</th>
                     <th className="px-6 py-4 font-semibold">Course / Service</th>
+                    <th className="px-6 py-4 font-semibold">Date</th>
                     <th className="px-6 py-4 font-semibold">Fees Status</th>
                     <th className="px-6 py-4 font-semibold">Due / Pending</th>
                     <th className="px-6 py-4 font-semibold">Status</th>
@@ -1090,6 +1348,14 @@ export function AdminDashboard() {
                             <span className="text-sm text-gray-700">
                               {record.course}
                             </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-700">
+                              {formatRecordDate(record.enrollmentDate)}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {record.recordType === 'student' ? 'Admitted' : 'Service date'}
+                            </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
@@ -1227,7 +1493,7 @@ export function AdminDashboard() {
 
                     <tr>
                       <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-12 text-center text-gray-500">
                     
                         <div className="flex flex-col items-center justify-center">
@@ -2702,6 +2968,290 @@ export function AdminDashboard() {
                     </button>
                   </div>
                 </div>
+            }
+            </div>
+          </div>
+        }
+
+        {!isTabLoading && activeTab === 'computer-register' &&
+        <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-gray-200 border-t-0 overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-bold text-gray-800">
+                Register Computer Package Student
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Capture students enrolling for computer training packages.
+              </p>
+            </div>
+            <div className="p-6">
+              {computerRegNumber ?
+            <div className="text-center py-8">
+                  <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                    <CheckCircle className="h-8 w-8 text-[#1E90FF]" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    Computer Student Registered
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    The computer package student has been saved successfully.
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-6 inline-block mb-6 border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-1">
+                      Registration Number
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-2xl font-mono font-bold text-[#1E90FF]">
+                        {computerRegNumber}
+                      </p>
+                      <button
+                    onClick={() => navigator.clipboard.writeText(computerRegNumber)}
+                    className="p-2 text-gray-400 hover:text-[#1E90FF] hover:bg-blue-50 rounded-md transition-colors"
+                    title="Copy">
+                        <Copy className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-center gap-4">
+                    <button
+                  onClick={resetComputerRegistration}
+                  className="bg-[#1E90FF] text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-blue-600 transition-colors">
+                      Register Another Computer Student
+                    </button>
+                    <button
+                  onClick={() => void handleTabChange('students')}
+                  className="border border-gray-300 text-gray-700 px-6 py-2.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
+                      View Students
+                    </button>
+                  </div>
+                </div> :
+
+            <form onSubmit={handleComputerRegistrationSubmit}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Branch *
+                      </label>
+                      <select
+                    name="branch"
+                    value={computerRegFormData.branch}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none">
+                        <option value="">Select branch</option>
+                        <option value="Eldoret Main">Eldoret Main Branch</option>
+                        <option value="Eldoret Road">Eldoret Road Branch</option>
+                        <option value="Nyahururu">Nyahururu Branch</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Computer Package *
+                      </label>
+                      <select
+                    name="packageName"
+                    value={computerRegFormData.packageName}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none">
+                        <option value="">Select package</option>
+                        {computerPackages.map((item) =>
+                    <option key={item.id} value={item.id}>
+                            {item.title} ({item.duration})
+                          </option>
+                    )}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Full Name *
+                      </label>
+                      <input
+                    type="text"
+                    name="studentName"
+                    value={computerRegFormData.studentName}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none"
+                    placeholder="Enter full name" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        ID/Passport Number *
+                      </label>
+                      <input
+                    type="text"
+                    name="idNumber"
+                    value={computerRegFormData.idNumber}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none"
+                    placeholder="Enter ID number" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Gender *
+                      </label>
+                      <select
+                    name="gender"
+                    value={computerRegFormData.gender}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none">
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date of Birth *
+                      </label>
+                      <input
+                    type="date"
+                    name="dob"
+                    value={computerRegFormData.dob}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nationality
+                      </label>
+                      <input
+                    type="text"
+                    name="nationality"
+                    value={computerRegFormData.nationality}
+                    onChange={handleComputerRegChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none"
+                    placeholder="e.g. Kenyan" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        County
+                      </label>
+                      <input
+                    type="text"
+                    name="county"
+                    value={computerRegFormData.county}
+                    onChange={handleComputerRegChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none"
+                    placeholder="e.g. Uasin Gishu" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address *
+                      </label>
+                      <input
+                    type="email"
+                    name="email"
+                    value={computerRegFormData.email}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none"
+                    placeholder="student@email.com" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone Number *
+                      </label>
+                      <input
+                    type="tel"
+                    name="phone"
+                    value={computerRegFormData.phone}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none"
+                    placeholder="07XXXXXXXX" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Preferred Schedule
+                      </label>
+                      <select
+                    name="schedule"
+                    value={computerRegFormData.schedule}
+                    onChange={handleComputerRegChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none">
+                        <option value="">Select schedule</option>
+                        <option value="Morning">Morning (8am-12pm)</option>
+                        <option value="Afternoon">Afternoon (12pm-4pm)</option>
+                        <option value="Evening">Evening (4pm-6pm)</option>
+                        <option value="Weekend">Weekend</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {selectedComputerPackage &&
+              <div className="bg-blue-50 rounded-lg p-4 mt-6 mb-6 border border-blue-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">Selected Package:</span>
+                        <span className="text-sm font-bold text-gray-900">
+                          {selectedComputerPackage.title}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">Duration:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {selectedComputerPackage.duration}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-gray-800">Package Fee:</span>
+                        <span className="text-lg font-bold text-[#1E90FF]">
+                          KSh {selectedComputerPackage.fee.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+              }
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Amount Paid Now (KSh) *
+                      </label>
+                      <input
+                    type="number"
+                    value={computerAmountPaid}
+                    onChange={(e) =>
+                    setComputerAmountPaid(
+                      e.target.value ? Number(e.target.value) : ''
+                    )
+                    }
+                    required
+                    min={0}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#1E90FF] focus:border-[#1E90FF] outline-none"
+                    placeholder="Enter amount" />
+                    </div>
+                  </div>
+
+                  <div className="mb-6 space-y-3">
+                    <label className="flex items-start gap-2">
+                      <input
+                    type="checkbox"
+                    name="termsAccepted"
+                    checked={computerRegFormData.termsAccepted}
+                    onChange={handleComputerRegChange}
+                    required
+                    className="mt-1 h-4 w-4 text-[#1E90FF] rounded border-gray-300" />
+                      <span className="text-sm text-gray-600">
+                        I confirm the student has accepted the enrollment terms for this package.
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                  type="submit"
+                  disabled={isSubmittingComputerReg}
+                  className="bg-[#1E90FF] text-white px-8 py-2.5 rounded-md text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center">
+                      {isSubmittingComputerReg &&
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  }
+                      {isSubmittingComputerReg ? 'Registering...' : 'Register Computer Student'}
+                    </button>
+                  </div>
+                </form>
             }
             </div>
           </div>
