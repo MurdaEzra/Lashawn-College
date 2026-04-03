@@ -199,6 +199,16 @@ const mapServiceInvoiceRow = (row: ServiceInvoiceRow): ServiceInvoice => ({
   notes: row.notes || '',
   dueDate: row.due_date || ''
 });
+
+const getCurrentAdminScope = () => {
+  const admin = getAdminAuthenticated();
+
+  return {
+    id: admin?.id?.trim() || '',
+    role: admin?.role?.trim() || 'admin'
+  };
+};
+
 export function AdminDashboard() {
   const navigate = useNavigate();
   const {
@@ -624,9 +634,7 @@ export function AdminDashboard() {
   const fetchServiceInvoices = async () => {
     setServiceInvoiceLoading(true);
     setServiceInvoiceError('');
-    const sessionAdmin = getAdminAuthenticated();
-    const sessionAdminId = sessionAdmin?.id?.trim();
-    const sessionAdminRole = sessionAdmin?.role?.trim() || 'admin';
+    const adminScope = getCurrentAdminScope();
 
     let query = supabase
       .from('service_invoices')
@@ -651,8 +659,8 @@ export function AdminDashboard() {
       )
       .order('created_at', { ascending: false });
 
-    if (sessionAdminRole !== 'super_admin' && sessionAdminId) {
-      query = query.eq('admitted_by', sessionAdminId);
+    if (adminScope.role !== 'super_admin') {
+      query = query.eq('admitted_by', adminScope.id);
     }
 
     const { data, error } = await query;
@@ -999,7 +1007,8 @@ export function AdminDashboard() {
   {
     setStudentActionLoadingId(`mark-paid-${invoiceNumber}`);
     try {
-      const { error } = await supabase
+      const adminScope = getCurrentAdminScope();
+      let query = supabase
         .from('service_invoices')
         .update({
           amount_paid: totalAmount,
@@ -1007,6 +1016,12 @@ export function AdminDashboard() {
           status: 'Paid'
         })
         .eq('id', invoiceId);
+
+      if (adminScope.role !== 'super_admin') {
+        query = query.eq('admitted_by', adminScope.id);
+      }
+
+      const { error } = await query;
 
       if (error) {
         throw error;
@@ -1034,10 +1049,17 @@ export function AdminDashboard() {
     if (window.confirm('Are you sure you want to delete this service invoice?')) {
       setStudentActionLoadingId(`delete-${invoiceNumber}`);
       try {
-        const { error } = await supabase
+        const adminScope = getCurrentAdminScope();
+        let query = supabase
           .from('service_invoices')
           .delete()
           .eq('id', invoiceId);
+
+        if (adminScope.role !== 'super_admin') {
+          query = query.eq('admitted_by', adminScope.id);
+        }
+
+        const { error } = await query;
 
         if (error) {
           throw error;
