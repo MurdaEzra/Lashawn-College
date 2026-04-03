@@ -288,13 +288,17 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
       .order('created_at', { ascending: false });
 
     if (admin.role !== 'super_admin') {
+      if (!admin.id) {
+        setError('Your admin session is missing an ID. Please sign in again.');
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
+
       query = query.eq('admitted_by', admin.id);
     }
 
     const { data, error: fetchError } = await query;
-
-    console.log('Logged admin:', admin);
-    console.log('Students returned:', data);
 
     if (fetchError) {
       setError(fetchError.message);

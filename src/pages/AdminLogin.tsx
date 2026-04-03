@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { isAdminAuthenticated, setAdminAuthenticated } from '../utils/adminAuth';
-// import { supabase } from '../contexts/supabaseClient';
+import { supabase } from '../contexts/supabaseClient';
 export function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +16,30 @@ export function AdminLogin() {
   const [registerError, setRegisterError] = useState('');
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const navigate = useNavigate();
+
+  const resolveAdminId = async (adminEmail: string, adminId?: string) => {
+    const normalizedId = adminId?.trim();
+    if (normalizedId) {
+      return normalizedId;
+    }
+
+    const normalizedEmail = adminEmail.trim();
+    if (!normalizedEmail) {
+      return '';
+    }
+
+    const { data, error } = await supabase
+      .from('admins')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
+    if (error) {
+      return '';
+    }
+
+    return data?.id?.trim() || '';
+  };
 
   useEffect(() => {
     if (isAdminAuthenticated()) {
@@ -73,10 +97,15 @@ export function AdminLogin() {
         setIsLoading(false);
         return;
       }
+      const resolvedAdminEmail = result.admin?.email || email;
+      const resolvedAdminId = await resolveAdminId(
+        resolvedAdminEmail,
+        result.admin?.id
+      );
       setAdminAuthenticated({
-        id: result.admin?.id || '',
+        id: resolvedAdminId,
         name: result.admin?.name || '',
-        email: result.admin?.email || email,
+        email: resolvedAdminEmail,
         role: result.admin?.role || 'admin'
       });
       navigate('/admin/dashboard', { replace: true });

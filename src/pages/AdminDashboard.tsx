@@ -636,6 +636,13 @@ export function AdminDashboard() {
     setServiceInvoiceError('');
     const adminScope = getCurrentAdminScope();
 
+    if (adminScope.role !== 'super_admin' && !adminScope.id) {
+      setServiceInvoices([]);
+      setServiceInvoiceError('Your admin session is missing an ID. Please sign in again.');
+      setServiceInvoiceLoading(false);
+      return;
+    }
+
     let query = supabase
       .from('service_invoices')
       .select(
@@ -1008,6 +1015,10 @@ export function AdminDashboard() {
     setStudentActionLoadingId(`mark-paid-${invoiceNumber}`);
     try {
       const adminScope = getCurrentAdminScope();
+      if (adminScope.role !== 'super_admin' && !adminScope.id) {
+        throw new Error('Your admin session is missing an ID. Please sign in again.');
+      }
+
       let query = supabase
         .from('service_invoices')
         .update({
@@ -1050,6 +1061,10 @@ export function AdminDashboard() {
       setStudentActionLoadingId(`delete-${invoiceNumber}`);
       try {
         const adminScope = getCurrentAdminScope();
+        if (adminScope.role !== 'super_admin' && !adminScope.id) {
+          throw new Error('Your admin session is missing an ID. Please sign in again.');
+        }
+
         let query = supabase
           .from('service_invoices')
           .delete()
