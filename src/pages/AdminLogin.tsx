@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ShieldAlert, Eye, EyeOff } from 'lucide-react';
 import { isAdminAuthenticated, setAdminAuthenticated } from '../utils/adminAuth';
 import { supabase } from '../contexts/supabaseClient';
+
+interface AdminProfileRow {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
+}
+
 export function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,28 +25,28 @@ export function AdminLogin() {
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const navigate = useNavigate();
 
-  const resolveAdminId = async (adminEmail: string, adminId?: string) => {
+  const resolveAdminProfile = async (adminEmail: string, adminId?: string) => {
     const normalizedId = adminId?.trim();
-    if (normalizedId) {
-      return normalizedId;
-    }
-
     const normalizedEmail = adminEmail.trim();
-    if (!normalizedEmail) {
-      return '';
+    if (!normalizedId && !normalizedEmail) {
+      return null;
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('admins')
-      .select('id')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
+      .select('id, name, email, role');
+
+    query = normalizedId ?
+      query.eq('id', normalizedId) :
+      query.eq('email', normalizedEmail);
+
+    const { data, error } = await query.maybeSingle();
 
     if (error) {
-      return '';
+      return null;
     }
 
-    return data?.id?.trim() || '';
+    return (data as AdminProfileRow | null) || null;
   };
 
   useEffect(() => {
@@ -98,15 +106,15 @@ export function AdminLogin() {
         return;
       }
       const resolvedAdminEmail = result.admin?.email || email;
-      const resolvedAdminId = await resolveAdminId(
+      const resolvedAdminProfile = await resolveAdminProfile(
         resolvedAdminEmail,
         result.admin?.id
       );
       setAdminAuthenticated({
-        id: resolvedAdminId,
-        name: result.admin?.name || '',
-        email: resolvedAdminEmail,
-        role: result.admin?.role || 'admin'
+        id: resolvedAdminProfile?.id?.trim() || result.admin?.id || '',
+        name: resolvedAdminProfile?.name?.trim() || result.admin?.name || '',
+        email: resolvedAdminProfile?.email?.trim() || resolvedAdminEmail,
+        role: resolvedAdminProfile?.role?.trim() || result.admin?.role || 'admin'
       });
       navigate('/admin/dashboard', { replace: true });
     } catch (err) {

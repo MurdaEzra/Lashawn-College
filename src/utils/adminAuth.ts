@@ -6,8 +6,22 @@ const ADMIN_EMAIL_KEY = 'adminEmail';
 const ADMIN_ROLE_KEY = 'adminRole';
 const ADMIN_SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 
+function normalizeAdminRole(role?: string | null) {
+  const normalizedRole = role?.trim().toLowerCase().replace(/[\s-]+/g, '_');
+
+  if (normalizedRole === 'superadmin') {
+    return 'super_admin';
+  }
+
+  return normalizedRole || 'admin';
+}
+
 function hasWindow() {
   return typeof window !== 'undefined';
+}
+
+export function isSuperAdminRole(role?: string | null) {
+  return normalizeAdminRole(role) === 'super_admin';
 }
 
 export function setAdminAuthenticated(admin?: {
@@ -25,7 +39,7 @@ export function setAdminAuthenticated(admin?: {
   window.sessionStorage.setItem(ADMIN_ID_KEY, admin?.id?.trim() || '');
   window.sessionStorage.setItem(ADMIN_NAME_KEY, admin?.name?.trim() || '');
   window.sessionStorage.setItem(ADMIN_EMAIL_KEY, admin?.email?.trim() || '');
-  window.sessionStorage.setItem(ADMIN_ROLE_KEY, admin?.role?.trim() || 'admin');
+  window.sessionStorage.setItem(ADMIN_ROLE_KEY, normalizeAdminRole(admin?.role));
 }
 
 export function clearAdminAuthenticated() {
@@ -70,7 +84,7 @@ export function getAdminSession() {
   const id = window.sessionStorage.getItem(ADMIN_ID_KEY) || '';
   const name = window.sessionStorage.getItem(ADMIN_NAME_KEY) || '';
   const email = window.sessionStorage.getItem(ADMIN_EMAIL_KEY) || '';
-  const role = window.sessionStorage.getItem(ADMIN_ROLE_KEY) || 'admin';
+  const role = normalizeAdminRole(window.sessionStorage.getItem(ADMIN_ROLE_KEY));
 
   return {
     id,

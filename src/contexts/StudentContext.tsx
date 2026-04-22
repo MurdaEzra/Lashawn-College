@@ -5,7 +5,7 @@ import React, {
 } from 'react';
 import { supabase } from './supabaseClient';
 import { StudentContext } from './StudentContextContext';
-import { getAdminAuthenticated } from '../utils/adminAuth';
+import { getAdminAuthenticated, isSuperAdminRole } from '../utils/adminAuth';
 
 type ContactType = 'next_of_kin' | 'sponsor';
 
@@ -287,7 +287,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
       )
       .order('created_at', { ascending: false });
 
-    if (admin.role !== 'super_admin') {
+    if (!isSuperAdminRole(admin.role)) {
       if (!admin.id) {
         setError('Your admin session is missing an ID. Please sign in again.');
         setStudents([]);

@@ -43,7 +43,12 @@ import {
 '../data/services';
 import { getStoredFees, saveFees, type FeeStructure } from '../data/feeStructure';
 import { supabase } from '../contexts/supabaseClient';
-import { clearAdminAuthenticated, getAdminAuthenticated } from '../utils/adminAuth';
+import {
+  clearAdminAuthenticated,
+  getAdminAuthenticated,
+  isSuperAdminRole,
+  setAdminAuthenticated
+} from '../utils/adminAuth';
 
 interface ServiceInvoice {
   id: string;
@@ -84,6 +89,13 @@ interface ServiceInvoiceRow {
   invoice_date: string | null;
   due_date: string | null;
   notes: string | null;
+}
+
+interface AdminProfileRow {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
 }
 
 interface ComputerPackageOption {
@@ -205,7 +217,7 @@ const getCurrentAdminScope = () => {
 
   return {
     id: admin?.id?.trim() || '',
-    role: admin?.role?.trim() || 'admin'
+    role: isSuperAdminRole(admin?.role) ? 'super_admin' : admin?.role?.trim() || 'admin'
   };
 };
 
@@ -636,7 +648,7 @@ export function AdminDashboard() {
     setServiceInvoiceError('');
     const adminScope = getCurrentAdminScope();
 
-    if (adminScope.role !== 'super_admin' && !adminScope.id) {
+    if (!isSuperAdminRole(adminScope.role) && !adminScope.id) {
       setServiceInvoices([]);
       setServiceInvoiceError('Your admin session is missing an ID. Please sign in again.');
       setServiceInvoiceLoading(false);
@@ -666,7 +678,7 @@ export function AdminDashboard() {
       )
       .order('created_at', { ascending: false });
 
-    if (adminScope.role !== 'super_admin') {
+    if (!isSuperAdminRole(adminScope.role)) {
       query = query.eq('admitted_by', adminScope.id);
     }
 
@@ -776,30 +788,51 @@ export function AdminDashboard() {
     (c) => c.code === regFormData.drivingCategory
   );
   useEffect(() => {
-    void refreshStudents();
-    void fetchServiceInvoices();
-  }, [refreshStudents]);
-  useEffect(() => {
-    const loadAdminProfile = async () => {
-      const sessionAdminId = getAdminAuthenticated()?.id?.trim();
+    let isMounted = true;
 
-      if (!sessionAdminId) {
-        return;
+    const syncAdminProfileAndLoadRecords = async () => {
+      const sessionAdmin = getAdminAuthenticated();
+      const sessionAdminId = sessionAdmin?.id?.trim() || '';
+      const sessionAdminEmail = sessionAdmin?.email?.trim() || '';
+
+      if (sessionAdminId || sessionAdminEmail) {
+        let query = supabase
+          .from('admins')
+          .select('id, name, email, role');
+
+        query = sessionAdminId ?
+          query.eq('id', sessionAdminId) :
+          query.eq('email', sessionAdminEmail);
+
+        const { data, error } = await query.maybeSingle();
+
+        if (!error && data && isMounted) {
+          const adminProfile = data as AdminProfileRow;
+          setAdminAuthenticated({
+            id: adminProfile.id?.trim() || sessionAdminId,
+            name: adminProfile.name?.trim() || sessionAdmin?.name || '',
+            email: adminProfile.email?.trim() || sessionAdminEmail,
+            role: adminProfile.role?.trim() || sessionAdmin?.role || 'admin'
+          });
+
+          if (adminProfile.name?.trim()) {
+            setAdminName(adminProfile.name.trim());
+          }
+        } else if (sessionAdmin?.name && isMounted) {
+          setAdminName(sessionAdmin.name.trim() || 'Admin');
+        }
       }
 
-      const { data, error } = await supabase
-        .from('admins')
-        .select('name')
-        .eq('id', sessionAdminId)
-        .single();
-
-      if (!error && data?.name) {
-        setAdminName(data.name);
-      }
+      await refreshStudents();
+      await fetchServiceInvoices();
     };
 
-    void loadAdminProfile();
-  }, []);
+    void syncAdminProfileAndLoadRecords();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshStudents]);
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setTodayMarker(new Date());
@@ -1015,7 +1048,7 @@ export function AdminDashboard() {
     setStudentActionLoadingId(`mark-paid-${invoiceNumber}`);
     try {
       const adminScope = getCurrentAdminScope();
-      if (adminScope.role !== 'super_admin' && !adminScope.id) {
+      if (!isSuperAdminRole(adminScope.role) && !adminScope.id) {
         throw new Error('Your admin session is missing an ID. Please sign in again.');
       }
 
@@ -1028,7 +1061,7 @@ export function AdminDashboard() {
         })
         .eq('id', invoiceId);
 
-      if (adminScope.role !== 'super_admin') {
+      if (!isSuperAdminRole(adminScope.role)) {
         query = query.eq('admitted_by', adminScope.id);
       }
 
@@ -1061,7 +1094,7 @@ export function AdminDashboard() {
       setStudentActionLoadingId(`delete-${invoiceNumber}`);
       try {
         const adminScope = getCurrentAdminScope();
-        if (adminScope.role !== 'super_admin' && !adminScope.id) {
+        if (!isSuperAdminRole(adminScope.role) && !adminScope.id) {
           throw new Error('Your admin session is missing an ID. Please sign in again.');
         }
 
@@ -1070,7 +1103,7 @@ export function AdminDashboard() {
           .delete()
           .eq('id', invoiceId);
 
-        if (adminScope.role !== 'super_admin') {
+        if (!isSuperAdminRole(adminScope.role)) {
           query = query.eq('admitted_by', adminScope.id);
         }
 
