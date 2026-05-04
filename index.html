@@ -1,18 +1,487 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/dgfmhyebp/image/upload/v1773819105/Untitled_design-Photoroom_g5hfty.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7159696681879456"
-      crossorigin="anonymous"
-    ></script>
-    <title>Lashawn Driving & Computer College</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/index.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Lashawn Academy | Premier Driving & Computer College in Kenya</title>
+  <meta name="description" content="Lashawn Driving School & Computer College — NTSA certified training, computer packages, branding services, and branches in Eldoret & Kinamba. Enroll today.">
+  <!-- Google Fonts + modern icons (Font Awesome) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #f9fafc;
+      color: #0a2540;
+      line-height: 1.5;
+      scroll-behavior: smooth;
+    }
+
+    /* custom font fallback */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap');
+
+    /* containers & utility */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section {
+      padding: 80px 0;
+    }
+
+    .section-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 48px;
+      text-align: center;
+      position: relative;
+    }
+    .section-title:after {
+      content: '';
+      display: block;
+      width: 70px;
+      height: 4px;
+      background: #f5b042;
+      margin: 16px auto 0;
+      border-radius: 4px;
+    }
+
+    /* buttons */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #f5b042;
+      color: #0a2b2e;
+      font-weight: 700;
+      padding: 14px 32px;
+      border-radius: 40px;
+      text-decoration: none;
+      transition: 0.3s ease;
+      box-shadow: 0 8px 20px rgba(245, 176, 66, 0.3);
+      border: none;
+      font-size: 1rem;
+    }
+    .btn-primary:hover {
+      background: #e09d28;
+      transform: translateY(-3px);
+      box-shadow: 0 15px 25px rgba(245, 176, 66, 0.4);
+    }
+    .btn-outline-light {
+      border: 2px solid white;
+      background: transparent;
+      color: white;
+      padding: 10px 28px;
+      border-radius: 40px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .btn-outline-light:hover {
+      background: white;
+      color: #1e3a8a;
+    }
+
+    /* header / hero */
+    .hero {
+      background: linear-gradient(125deg, #0b2b26 0%, #0f3b3a 45%, #1e4f4b 100%);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 520px;
+      position: relative;
+      z-index: 2;
+    }
+    .hero h1 {
+      font-size: 3.2rem;
+      font-weight: 800;
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+    .hero p {
+      font-size: 1.3rem;
+      max-width: 700px;
+      margin-bottom: 32px;
+      opacity: 0.9;
+    }
+    .hero-badge {
+      background: rgba(255,255,240,0.15);
+      backdrop-filter: blur(4px);
+      border-radius: 100px;
+      padding: 8px 20px;
+      display: inline-block;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    /* floating shapes */
+    .hero-shape {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(245,176,66,0.2) 0%, rgba(0,0,0,0) 70%);
+      border-radius: 50%;
+      bottom: -100px;
+      right: -80px;
+      z-index: 1;
+    }
+
+    /* cards */
+    .card {
+      background: white;
+      border-radius: 28px;
+      padding: 28px 24px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+      transition: all 0.3s;
+      height: 100%;
+      border: 1px solid rgba(0,0,0,0.03);
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 25px 40px rgba(0,0,0,0.1);
+    }
+    .card-icon {
+      font-size: 2.2rem;
+      color: #f5b042;
+      margin-bottom: 20px;
+    }
+    .card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    /* grid systems */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+    }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    /* service list style */
+    .service-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    .service-list li {
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #efefef;
+    }
+    .service-list li i {
+      color: #f5b042;
+      width: 22px;
+    }
+
+    /* branch card style */
+    .branch-card {
+      background: white;
+      border-radius: 28px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .branch-card i {
+      font-size: 2rem;
+      color: #0b2b26;
+      margin-bottom: 12px;
+    }
+    .contact-info {
+      background: #eef2f5;
+      border-radius: 28px;
+      padding: 32px;
+    }
+
+    /* extra services chips style */
+    .service-chip {
+      background: #fef6e8;
+      border-radius: 80px;
+      padding: 14px 20px;
+      text-align: center;
+      font-weight: 600;
+      transition: all 0.2s;
+      color: #a5620e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .service-chip i {
+      font-size: 1.4rem;
+    }
+    .service-chip:hover {
+      background: #f5b042;
+      color: white;
+      transform: scale(1.02);
+    }
+
+    .highlight-feature {
+      background: #f0f7f4;
+      border-radius: 28px;
+      text-align: center;
+      padding: 24px 16px;
+    }
+    footer {
+      background: #0a1f1e;
+      color: #cddfde;
+      padding: 48px 0 32px;
+    }
+    .footer-columns {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 30px;
+    }
+    @media (max-width: 820px) {
+      .grid-2, .grid-3, .grid-4 {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .hero h1 {
+        font-size: 2.2rem;
+      }
+      section {
+        padding: 50px 0;
+      }
+      .section-title {
+        font-size: 1.8rem;
+      }
+    }
+
+    /* maps placeholder / custom */
+    .wa-link {
+      color: #25D366;
+    }
+    .text-accent {
+      color: #f5b042;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO SECTION revamped -->
+<div class="hero">
+  <div class="hero-shape"></div>
+  <div class="container">
+    <div class="hero-badge">
+      <i class="fas fa-certificate"></i> NTSA Approved | Since 2012
+    </div>
+    <h1>Lashawn Driving School <br> & Computer College</h1>
+    <p>Train with confidence — expert driving lessons, computer packages, branding services & NTSA test readiness. Your journey starts here.</p>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+      <a href="#contact" class="btn-primary"><i class="fas fa-arrow-right"></i> Enroll Now</a>
+      <a href="#branches" class="btn-outline-light"><i class="fas fa-map-marker-alt"></i> Visit our branches</a>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+
+  <!-- DRIVING & ASSESSMENT section (combined but fresh) -->
+  <section id="driving">
+    <div class="grid-2">
+      <!-- left: driving categories -->
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-car-side"></i></div>
+        <h3>Professional Driving Lessons</h3>
+        <p>Full NTSA curriculum — all vehicle classes for personal, commercial, and PSV licenses.</p>
+        <ul class="service-list">
+          <li><i class="fas fa-motorcycle"></i> Class A – Motorcycles</li>
+          <li><i class="fas fa-car"></i> Class B – Light Vehicles</li>
+          <li><i class="fas fa-truck"></i> Class C – Commercial Vehicles</li>
+          <li><i class="fas fa-bus"></i> Class D – PSV (Matatus & Buses)</li>
+          <li><i class="fas fa-trailer"></i> Class E – Heavy Trucks & Trailers</li>
+        </ul>
+        <div style="margin-top: 20px;"><i class="fas fa-check-circle text-accent"></i> Flexible schedules & defensive driving</div>
+      </div>
+      <!-- right: driver assessment & certification -->
+      <div class="card">
+        <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
+        <h3>Driver Assessment & Certification</h3>
+        <ul class="service-list">
+          <li><i class="fas fa-file-alt"></i> Professional driving evaluation</li>
+          <li><i class="fas fa-award"></i> Competency certification (recognized)</li>
+          <li><i class="fas fa-chalkboard-user"></i> NTSA compliance assessment & pre-test</li>
+          <li><i class="fas fa-sync-alt"></i> Refresher training for license renewal</li>
+          <li><i class="fas fa-id-card"></i> Logbook monitoring & progress reports</li>
+        </ul>
+        <div style="background:#f2f7f2; border-radius: 20px; margin-top: 20px; padding: 12px;">
+          <i class="fas fa-star-of-life text-accent"></i> <strong>NTSA Test preparation:</strong> Guaranteed route practice & theory classes
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPUTER TRAINING - enhanced block -->
+  <section id="computer">
+    <div class="card" style="background: linear-gradient(115deg, #ffffff 0%, #fcf9f2 100%); padding: 0; overflow: hidden;">
+      <div style="display: flex; flex-wrap: wrap; align-items: center;">
+        <div style="flex: 2; padding: 36px 32px;">
+          <div class="card-icon"><i class="fas fa-laptop-code"></i></div>
+          <h3 style="font-size: 1.9rem;">Computer Packages</h3>
+          <p style="font-size: 1.1rem;"><strong>Fee: KES 3,500 only</strong> — comprehensive 1-month hands-on training.</p>
+          <ul class="service-list" style="margin: 20px 0;">
+            <li><i class="fas fa-check"></i> Microsoft Office (Word, Excel, PowerPoint)</li>
+            <li><i class="fas fa-check"></i> Internet & email essentials</li>
+            <li><i class="fas fa-check"></i> Computer basics & keyboarding</li>
+            <li><i class="fas fa-check"></i> Certificate upon completion</li>
+          </ul>
+          <div><span class="btn-primary" style="background: #0b2b26; box-shadow: none;"><i class="fas fa-calendar-alt"></i> Intake: Ongoing — enroll anytime</span></div>
+        </div>
+        <div style="flex: 1; background: #f5b04220; padding: 36px 24px; text-align: center; min-height: 100%;">
+          <i class="fas fa-graduation-cap" style="font-size: 4rem; color: #f5b042;"></i>
+          <p style="font-weight: 700; margin-top: 12px;">100% practical</p>
+          <p>Morning & evening classes</p>
+          <p><i class="fas fa-clock"></i> 1 Month intensive</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXTRA SERVICES (branding, printing etc) -->
+  <section id="extra-services">
+    <h2 class="section-title">Creative & Branding Hub</h2>
+    <div class="grid-3">
+      <div class="service-chip"><i class="fas fa-paint-brush"></i> Graphics Design</div>
+      <div class="service-chip"><i class="fas fa-print"></i> Plotter Services</div>
+      <div class="service-chip"><i class="fas fa-tshirt"></i> T-Shirt Printing</div>
+      <div class="service-chip"><i class="fas fa-trademark"></i> Branding</div>
+      <div class="service-chip"><i class="fas fa-flag-checkered"></i> Banners</div>
+      <div class="service-chip"><i class="fas fa-tags"></i> Stickers & Decals</div>
+    </div>
+    <p style="text-align: center; margin-top: 40px;"><i class="fas fa-people-arrows"></i> We also offer complete corporate branding, vehicle branding, and promotional material at affordable rates.</p>
+  </section>
+
+  <!-- WHY CHOOSE US - revamped with stats / improved -->
+  <section>
+    <h2 class="section-title">Why Lashawn Academy?</h2>
+    <div class="grid-4">
+      <div class="highlight-feature"><i class="fas fa-clipboard-check" style="font-size: 2.2rem; color: #f5b042;"></i><h3 style="margin: 12px 0 8px;">NTSA Prep</h3><p>Mock tests + on-road confidence</p></div>
+      <div class="highlight-feature"><i class="fas fa-wallet" style="font-size: 2.2rem; color: #f5b042;"></i><h3 style="margin: 12px 0 8px;">Affordable Fees</h3><p>Flexible payment plans & best rates</p></div>
+      <div class="highlight-feature"><i class="fas fa-bed" style="font-size: 2.2rem; color: #f5b042;"></i><h3 style="margin: 12px 0 8px;">Accommodation</h3><p>Comfortable stay for upcountry students</p></div>
+      <div class="highlight-feature"><i class="fas fa-chalkboard-user" style="font-size: 2.2rem; color: #f5b042;"></i><h3 style="margin: 12px 0 8px;">Expert Instructors</h3><p>Certified & patient trainers</p></div>
+    </div>
+  </section>
+
+  <!-- BRANCHES section with modern cards + contact icons -->
+  <section id="branches">
+    <h2 class="section-title">Our Learning Centers</h2>
+    <div class="grid-2">
+      <div class="branch-card">
+        <i class="fas fa-city"></i>
+        <h3>Eldoret Branch</h3>
+        <p><i class="fas fa-location-dot text-accent"></i> Opposite Khetias Supermarket, Eldoret CBD</p>
+        <p><i class="fas fa-phone-alt"></i> <a href="tel:+254117564318" style="text-decoration: none; color:#0a2540;">+254 117 564 318</a></p>
+        <p><i class="fab fa-whatsapp wa-link"></i> <strong>WhatsApp:</strong> +254 117 564 318</p>
+        <div style="margin-top: 16px;"><span class="btn-primary" style="background: #1e4f4b; padding: 8px 20px; font-size: 0.85rem;">Get direction <i class="fas fa-map-pin"></i></span></div>
+      </div>
+      <div class="branch-card">
+        <i class="fas fa-building"></i>
+        <h3>Kinamba Branch</h3>
+        <p><i class="fas fa-location-dot text-accent"></i> Victory House, Opposite Posta, Kinamba Square</p>
+        <p><i class="fas fa-phone-alt"></i> <a href="tel:+254797763948" style="text-decoration: none; color:#0a2540;">+254 797 763 948</a></p>
+        <p><i class="fab fa-whatsapp wa-link"></i> <strong>WhatsApp:</strong> +254 797 763 948</p>
+        <div style="margin-top: 16px;"><span class="btn-primary" style="background: #1e4f4b; padding: 8px 20px; font-size: 0.85rem;">Book a visit <i class="fas fa-calendar-check"></i></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT & REGISTRATION (call to action) -->
+  <section id="contact">
+    <div class="contact-info">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="font-size: 1.8rem; margin-bottom: 12px;"><i class="fas fa-headset"></i> Ready to drive your future?</h2>
+          <p style="margin-bottom: 16px;">Call or WhatsApp our admissions team — we guide you through registration, classes, and NTSA booking.</p>
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <a href="tel:+254117564318" style="background: #0f3b3a; color: white; padding: 12px 24px; border-radius: 40px; text-decoration: none; font-weight: bold;"><i class="fas fa-phone-alt"></i> Call Eldoret</a>
+            <a href="https://wa.me/254117564318" target="_blank" style="background: #25D366; color: white; padding: 12px 24px; border-radius: 40px; text-decoration: none; font-weight: bold;"><i class="fab fa-whatsapp"></i> WhatsApp Eldoret</a>
+            <a href="https://wa.me/254797763948" target="_blank" style="background: #25D366; color: white; padding: 12px 24px; border-radius: 40px; text-decoration: none; font-weight: bold;"><i class="fab fa-whatsapp"></i> WhatsApp Kinamba</a>
+          </div>
+        </div>
+        <div style="margin-top: 20px; text-align: right;">
+          <p><i class="fas fa-globe"></i> <strong>www.lashawnacademy.com</strong></p>
+          <p><i class="fas fa-envelope"></i> info@lashawnacademy.co.ke</p>
+          <small>Registrations open daily from 8am – 6pm</small>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- FOOTER modern -->
+<footer>
+  <div class="container">
+    <div class="footer-columns">
+      <div>
+        <h3 style="color: #f5b042;">Lashawn Academy</h3>
+        <p>Your trusted partner for driver education & computer skills since 2012. NTSA registered & ISO compliant standards.</p>
+        <div style="margin-top: 14px;">
+          <i class="fab fa-facebook" style="margin-right: 16px; font-size: 1.4rem;"></i>
+          <i class="fab fa-instagram" style="margin-right: 16px; font-size: 1.4rem;"></i>
+          <i class="fab fa-twitter" style="margin-right: 16px; font-size: 1.4rem;"></i>
+        </div>
+      </div>
+      <div>
+        <h4>Quick links</h4>
+        <p><a href="#driving" style="color:#cddfde; text-decoration:none;">Driving Lessons</a></p>
+        <p><a href="#computer" style="color:#cddfde; text-decoration:none;">Computer Training</a></p>
+        <p><a href="#extra-services" style="color:#cddfde; text-decoration:none;">Branding & Printing</a></p>
+        <p><a href="#branches" style="color:#cddfde; text-decoration:none;">Branches</a></p>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <p><i class="fas fa-phone-alt"></i> Eldoret: +254 117 564 318</p>
+        <p><i class="fas fa-phone-alt"></i> Kinamba: +254 797 763 948</p>
+        <p><i class="fas fa-clock"></i> Mon-Sat: 8:00 - 18:00</p>
+      </div>
+    </div>
+    <hr style="border-color:#2c4a46; margin: 32px 0 24px;">
+    <p style="text-align: center;">© 2026 Lashawn Driving School & Computer College — Empowering Kenyan motorists & digital professionals.</p>
+  </div>
+</footer>
+
+<!-- small script for smooth scroll on anchor links -->
+<script>
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const href = this.getAttribute('href');
+      if (href === "#" || href === "") return;
+      const target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+</script>
+</body>
 </html>
